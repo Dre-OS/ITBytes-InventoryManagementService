@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const connectDB = async () => {
     try {
-        const connection = await mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://hedkkananayo:SNlqyQsqWsHuZXoe@itbytes-inventory.ffmfmuf.mongodb.net/?retryWrites=true&w=majority&appName=ITBYTES-Inventory', {
+        const connection = await mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://hedkkananayo:SNlqyQsqWsHuZXoe@itbytes-inventory.yigx9nb.mongodb.net/?retryWrites=true&w=majority&appName=ITBYTES-Inventory', {
             useNewUrlParser: true,
             useUnifiedTopology: true
         });
