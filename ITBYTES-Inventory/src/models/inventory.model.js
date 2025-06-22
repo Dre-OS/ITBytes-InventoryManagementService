@@ -1,28 +1,36 @@
 const mongoose = require('mongoose');
 
 const inventorySchema = new mongoose.Schema({
-    productId: {
+    ItemId: {
         type: String,
         required: true,
         unique: true
     },
-    productName: {
+    Name: {
         type: String,
         required: true
     },
-    quantity: {
+    Quantity: {
         type: Number,
         required: true,
         min: [1, 'Quantity cannot be less than 1']
     },
-    price: {
+    Description: {
+        type: String,
+        default: ''
+    },
+    Price: {
         type: Number,
         required: true,
         min: [0, 'Price cannot be negative']
     },
-    category: {
+    Tags: {
         type: String,
         required: true
+    },
+    isActive: {
+        type: Boolean,
+        default: true
     },
     lastUpdated: {
         type: Date,
