@@ -80,6 +80,7 @@ exports.processOrder = async (req, res) => {
         product.lastUpdated = Date.now();
         const updatedProduct = await product.save();
         
+        // Simplified response without event publishing
         res.status(200).json({
             message: 'Order processed successfully',
             orderDetails: {
