@@ -51,8 +51,14 @@ setupEventListeners();
 app.use(cors());
 app.use(bodyParser.json());
 
-// Swagger UI
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+// Swagger UI with custom options
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+    explorer: true,
+    swaggerOptions: {
+        defaultModelsExpandDepth: -1,  // Hide schemas section
+        docExpansion: 'list'           // Collapse all endpoints by default
+    }
+}));
 
 // Routes
 app.use('/api/admin/inventory', adminInventoryRoutes);
