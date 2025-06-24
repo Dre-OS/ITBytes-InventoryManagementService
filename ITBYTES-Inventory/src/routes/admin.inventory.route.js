@@ -10,16 +10,9 @@ const adminInventoryController = require('../controllers/admin.inventory.control
  *       type: object
  *       properties:
  *         image:
- *           type: object
- *           properties:
- *             url:
- *               type: string
- *               format: uri
- *               description: URL link to the image
- *             data:
- *               type: string
- *               format: base64
- *               description: Base64 encoded image data
+ *           type: string
+ *           required: false
+ *           description: Image URL or path
  *         name:
  *           type: string
  *           required: true

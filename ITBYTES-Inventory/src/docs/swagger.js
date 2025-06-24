@@ -24,21 +24,9 @@ const options = {
                     required: ['name', 'quantity', 'price', 'tags'],
                     properties: {
                         image: {
-                            type: 'object',
-                            properties: {
-                                url: {
-                                    type: 'string',
-                                    format: 'uri',
-                                    description: 'URL link to the image'
-                                },
-                                data: {
-                                    type: 'string',
-                                    format: 'base64',
-                                    description: 'Base64 encoded image data starting with data:image/(png|jpg|jpeg|gif);base64,. Max size: 5MB',
-                                    pattern: '^data:image\\/(png|jpg|jpeg|gif);base64,[A-Za-z0-9+/]*={0,2}$',
-                                    maxLength: 7000000 // Roughly 5MB in base64
-                                }
-                            }
+                            type: 'string',
+                            description: 'Image URL or path',
+                            required: false
                         },
                         name: {
                             type: 'string',
@@ -63,13 +51,26 @@ const options = {
                             items: {
                                 type: 'string'
                             },
-                            description: 'Item tags/categories',
-                            default: ['tag1', 'tag2']
+                            description: 'Item tags'
+                        },
+                        category: {
+                            type: 'string',
+                            description: 'Item category'
                         },
                         isActive: {
                             type: 'boolean',
                             description: 'Whether the item is active',
                             default: true
+                        },
+                        createdAt: {
+                            type: 'string',
+                            format: 'date-time',
+                            description: 'Creation timestamp'
+                        },
+                        updatedAt: {
+                            type: 'string',
+                            format: 'date-time',
+                            description: 'Last update timestamp'
                         }
                     }
                 },
@@ -78,21 +79,12 @@ const options = {
                     properties: {
                         _id: {
                             type: 'string',
-                            description: 'MongoDB document ID (used as item identifier)'
-                        },                        image: {
-                            type: 'object',
-                            properties: {
-                                url: {
-                                    type: 'string',
-                                    format: 'uri',
-                                    description: 'URL link to the image'
-                                },
-                                data: {
-                                    type: 'string',
-                                    format: 'base64',
-                                    description: 'Base64 encoded image of the item'
-                                }
-                            }
+                            description: 'MongoDB document ID'
+                        },
+                        image: {
+                            type: 'string',
+                            description: 'Image URL or path',
+                            required: false
                         },
                         name: {
                             type: 'string',
@@ -117,11 +109,26 @@ const options = {
                             items: {
                                 type: 'string'
                             },
-                            description: 'Item tags/categories'
+                            description: 'Item tags'
+                        },
+                        category: {
+                            type: 'string',
+                            description: 'Item category'
                         },
                         isActive: {
                             type: 'boolean',
-                            description: 'Whether the item is active'
+                            description: 'Whether the item is active',
+                            default: true
+                        },
+                        createdAt: {
+                            type: 'string',
+                            format: 'date-time',
+                            description: 'Creation timestamp'
+                        },
+                        updatedAt: {
+                            type: 'string',
+                            format: 'date-time',
+                            description: 'Last update timestamp'
                         }
                     }
                 },

@@ -5,12 +5,10 @@ const connectDB = async () => {
         const uri = process.env.MONGODB_URI || 'mongodb+srv://hedkkananayo:SNlqyQsqWsHuZXoe@itbytes-inventory.yigx9nb.mongodb.net/?retryWrites=true&w=majority&appName=ITBYTES-Inventory';
         
         const connection = await mongoose.connect(uri, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
             dbName: 'itbytes_db',
-            serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
-            autoIndex: true, // Build indexes
-            maxPoolSize: 10, // Maintain up to 10 socket connections
+            serverSelectionTimeoutMS: 5000,
+            autoIndex: true,
+            maxPoolSize: 10
         });
 
         // Add error handlers
