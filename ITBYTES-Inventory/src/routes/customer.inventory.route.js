@@ -17,21 +17,24 @@ const customerInventoryController = require('../controllers/customer.inventory.c
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/InventoryResponse'
+ *       500:
+ *         description: Server error
  */
 router.get('/products', customerInventoryController.getAvailableProducts);
 
 /**
  * @swagger
- * /api/customer/inventory/products/{ItemId}:
+ * /api/customer/inventory/products/{id}:
  *   get:
  *     summary: Get product details
  *     tags: [Customer]
  *     parameters:
  *       - in: path
- *         name: ItemId
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
+ *         description: MongoDB _id of the product
  *     responses:
  *       200:
  *         description: Product details
@@ -42,7 +45,7 @@ router.get('/products', customerInventoryController.getAvailableProducts);
  *       404:
  *         description: Product not found or out of stock
  */
-router.get('/products/:ItemId', customerInventoryController.getProductDetails);
+router.get('/products/:id', customerInventoryController.getProductDetails);
 
 /**
  * @swagger
@@ -56,13 +59,15 @@ router.get('/products/:ItemId', customerInventoryController.getProductDetails);
  *         application/json:
  *           schema:
  *             type: object
- *             required: ['ItemId', 'Quantity']
+ *             required: ['id', 'quantity']
  *             properties:
- *               ItemId:
+ *               id:
  *                 type: string
- *               Quantity:
+ *                 description: MongoDB _id of the product
+ *               quantity:
  *                 type: number
  *                 minimum: 1
+ *                 description: Required quantity
  *     responses:
  *       200:
  *         description: Availability check result
@@ -86,7 +91,23 @@ router.post('/check-availability', customerInventoryController.checkAvailability
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/OrderRequest'
+ *             type: object
+ *             required: ['id', 'quantity']
+ *             properties:
+ *               id:
+ *                 type: string
+ *                 description: MongoDB _id of the product
+ *               quantity:
+ *                 type: number
+ *                 minimum: 1
+ *                 description: Quantity to order
+ *               customerName:
+ *                 type: string
+ *                 description: Name of the customer
+ *               customerEmail:
+ *                 type: string
+ *                 format: email
+ *                 description: Email of the customer
  *     responses:
  *       200:
  *         description: Order processed successfully
