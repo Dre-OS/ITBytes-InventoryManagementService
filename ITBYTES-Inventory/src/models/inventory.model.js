@@ -1,41 +1,60 @@
 const mongoose = require('mongoose');
 
 const inventorySchema = new mongoose.Schema({
-    ItemId: {
-        type: String,
-        required: true,
-        unique: true
+    image: {
+        url: {
+            type: String,
+            required: false,
+            validate: {
+                validator: function(v) {
+                    return !v || /^(http|https):\/\/[^ "]+$/.test(v);
+                },
+                message: props => `${props.value} is not a valid URL!`
+            }
+        },
+        data: {
+            type: String,
+            required: false,
+            validate: {
+                validator: function(v) {
+                    return !v || /^data:image\/(jpeg|jpg|png|gif);base64,/.test(v);
+                },
+                message: props => 'Invalid base64 image format!'
+            }
+        }
     },
-    Name: {
+    name: {
         type: String,
         required: true
     },
-    Quantity: {
+    quantity: {
         type: Number,
         required: true,
         min: [1, 'Quantity cannot be less than 1']
     },
-    Description: {
+    description: {
         type: String,
         default: ''
     },
-    Price: {
+    price: {
         type: Number,
         required: true,
         min: [0, 'Price cannot be negative']
     },
-    Tags: {
-        type: String,
+    tags: {
+        type: [String],
         required: true
     },
+    category: {
+        type: String,
+        required:false,
+    },   
     isActive: {
         type: Boolean,
         default: true
-    },
-    lastUpdated: {
-        type: Date,
-        default: Date.now
     }
+}, {
+    timestamps: true
 });
 
 // Pre-save middleware to prevent negative quantities
