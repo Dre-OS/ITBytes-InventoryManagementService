@@ -12,7 +12,7 @@ exports.getAllProducts = async (req, res) => {
 
 exports.getProduct = async (req, res) => {
     try {
-        const product = await Inventory.findOne({ productId: req.params.productId });
+        const product = await Inventory.findById(req.params.id);
         if (!product) {
             return res.status(404).json({ message: 'Product not found' });
         }
@@ -34,7 +34,7 @@ exports.createProduct = async (req, res) => {
 
 exports.updateProduct = async (req, res) => {
     try {
-        const product = await Inventory.findOne({ productId: req.params.productId });
+        const product = await Inventory.findById(req.params.id);
         if (!product) {
             return res.status(404).json({ message: 'Product not found' });
         }
@@ -53,7 +53,7 @@ exports.updateProduct = async (req, res) => {
 
 exports.deleteProduct = async (req, res) => {
     try {
-        const product = await Inventory.findOneAndDelete({ productId: req.params.productId });
+        const product = await Inventory.findByIdAndDelete(req.params.id);
         if (!product) {
             return res.status(404).json({ message: 'Product not found' });
         }
@@ -70,13 +70,12 @@ exports.updateStock = async (req, res) => {
             return res.status(400).json({ message: 'Quantity cannot be less than 1' });
         }
 
-        const product = await Inventory.findOne({ productId: req.params.productId });
+        const product = await Inventory.findById(req.params.id);
         if (!product) {
             return res.status(404).json({ message: 'Product not found' });
         }
 
-        product.quantity = quantity;
-        product.lastUpdated = Date.now();
+        product.Quantity = quantity;
         const updatedProduct = await product.save();
         
         res.status(200).json(updatedProduct);
