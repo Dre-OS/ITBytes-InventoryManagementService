@@ -21,43 +21,55 @@ const options = {
             schemas: {
                 Inventory: {
                     type: 'object',
-                    required: ['ItemId', 'Name', 'Quantity', 'Price', 'Tags'],
+                    required: ['name', 'quantity', 'price', 'tags'],
                     properties: {
-                        ItemId: {
-                            type: 'string',
-                            description: 'Unique identifier for the item'
+                        image: {
+                            type: 'object',
+                            properties: {
+                                url: {
+                                    type: 'string',
+                                    format: 'uri',
+                                    description: 'URL link to the image'
+                                },
+                                data: {
+                                    type: 'string',
+                                    format: 'base64',
+                                    description: 'Base64 encoded image data starting with data:image/(png|jpg|jpeg|gif);base64,. Max size: 5MB',
+                                    pattern: '^data:image\\/(png|jpg|jpeg|gif);base64,[A-Za-z0-9+/]*={0,2}$',
+                                    maxLength: 7000000 // Roughly 5MB in base64
+                                }
+                            }
                         },
-                        Name: {
+                        name: {
                             type: 'string',
                             description: 'Name of the item'
                         },
-                        Quantity: {
+                        quantity: {
                             type: 'number',
                             minimum: 1,
                             description: 'Current stock quantity'
                         },
-                        Description: {
+                        description: {
                             type: 'string',
                             description: 'Item description'
                         },
-                        Price: {
+                        price: {
                             type: 'number',
                             minimum: 0,
                             description: 'Item price'
                         },
-                        Tags: {
-                            type: 'string',
-                            description: 'Item tags/category'
+                        tags: {
+                            type: 'array',
+                            items: {
+                                type: 'string'
+                            },
+                            description: 'Item tags/categories',
+                            default: ['tag1', 'tag2']
                         },
                         isActive: {
                             type: 'boolean',
                             description: 'Whether the item is active',
                             default: true
-                        },
-                        lastUpdated: {
-                            type: 'string',
-                            format: 'date-time',
-                            description: 'Last update timestamp'
                         }
                     }
                 },
@@ -66,63 +78,71 @@ const options = {
                     properties: {
                         _id: {
                             type: 'string',
-                            description: 'MongoDB document ID'
+                            description: 'MongoDB document ID (used as item identifier)'
+                        },                        image: {
+                            type: 'object',
+                            properties: {
+                                url: {
+                                    type: 'string',
+                                    format: 'uri',
+                                    description: 'URL link to the image'
+                                },
+                                data: {
+                                    type: 'string',
+                                    format: 'base64',
+                                    description: 'Base64 encoded image of the item'
+                                }
+                            }
                         },
-                        ItemId: {
-                            type: 'string',
-                            description: 'Unique identifier for the item'
-                        },
-                        Name: {
+                        name: {
                             type: 'string',
                             description: 'Name of the item'
                         },
-                        Quantity: {
+                        quantity: {
                             type: 'number',
                             minimum: 1,
                             description: 'Current stock quantity'
                         },
-                        Description: {
+                        description: {
                             type: 'string',
                             description: 'Item description'
                         },
-                        Price: {
+                        price: {
                             type: 'number',
                             minimum: 0,
                             description: 'Item price'
                         },
-                        Tags: {
-                            type: 'string',
-                            description: 'Item tags/category'
+                        tags: {
+                            type: 'array',
+                            items: {
+                                type: 'string'
+                            },
+                            description: 'Item tags/categories'
                         },
                         isActive: {
                             type: 'boolean',
                             description: 'Whether the item is active'
-                        },
-                        lastUpdated: {
-                            type: 'string',
-                            format: 'date-time',
-                            description: 'Last update timestamp'
                         }
                     }
                 },
                 OrderRequest: {
                     type: 'object',
-                    required: ['ItemId', 'Quantity'],
+                    required: ['id', 'quantity'],
                     properties: {
-                        ItemId: {
+                        id: {
                             type: 'string',
                             description: 'ID of the item to order'
                         },
-                        Quantity: {
+                        quantity: {
                             type: 'number',
                             minimum: 1,
                             description: 'Quantity to order'
                         },
-                        CustomerName: {
+                        customerName: {
                             type: 'string',
                             description: 'Name of the customer placing the order'
                         },
-                        CustomerEmail: {
+                        customerEmail: {
                             type: 'string',
                             format: 'email',
                             description: 'Email of the customer'
@@ -136,11 +156,11 @@ const options = {
                             type: 'string',
                             description: 'Unique order identifier'
                         },
-                        ItemId: {
+                        id: {
                             type: 'string',
                             description: 'ID of the ordered item'
                         },
-                        Quantity: {
+                        quantity: {
                             type: 'number',
                             description: 'Quantity ordered'
                         },
@@ -178,12 +198,12 @@ const options = {
                     }
                 }
             }
+        },
+        swaggerOptions: {
+            defaultModelsExpandDepth: -1  // This will hide the schemas section at the bottom
         }
     },
-    apis: ['./src/routes/*.js'],
-    swaggerOptions: {
-        defaultModelsExpandDepth: -1  // This will hide the schemas section at the bottom
-    }
+    apis: ['./src/routes/*.js']
 };
 
 const swaggerSpec = swaggerJsdoc(options);
