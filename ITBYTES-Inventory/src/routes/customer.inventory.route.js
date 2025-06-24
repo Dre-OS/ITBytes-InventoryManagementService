@@ -16,7 +16,7 @@ const customerInventoryController = require('../controllers/customer.inventory.c
  *             schema:
  *               type: array
  *               items:
- *                 $ref: '#/components/schemas/Inventory'
+ *                 $ref: '#/components/schemas/InventoryResponse'
  */
 router.get('/products', customerInventoryController.getAvailableProducts);
 
@@ -38,7 +38,7 @@ router.get('/products', customerInventoryController.getAvailableProducts);
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Inventory'
+ *               $ref: '#/components/schemas/InventoryResponse'
  *       404:
  *         description: Product not found or out of stock
  */
@@ -60,23 +60,18 @@ router.get('/products/:ItemId', customerInventoryController.getProductDetails);
  *             properties:
  *               ItemId:
  *                 type: string
- *                 description: Item ID to check
  *               Quantity:
  *                 type: number
  *                 minimum: 1
- *                 description: Required quantity
  *     responses:
  *       200:
  *         description: Availability check result
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 available:
- *                   type: boolean
- *                 message:
- *                   type: string
+ *               $ref: '#/components/schemas/AvailabilityResponse'
+ *       404:
+ *         description: Product not found
  */
 router.post('/check-availability', customerInventoryController.checkAvailability);
 
@@ -101,10 +96,8 @@ router.post('/check-availability', customerInventoryController.checkAvailability
  *               $ref: '#/components/schemas/OrderResponse'
  *       400:
  *         description: Invalid request or insufficient stock
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Product not found
  */
 router.post('/order', customerInventoryController.processOrder);
 

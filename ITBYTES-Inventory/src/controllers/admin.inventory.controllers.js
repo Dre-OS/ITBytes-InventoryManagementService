@@ -44,7 +44,6 @@ exports.updateProduct = async (req, res) => {
             product[key] = req.body[key];
         });
 
-        product.lastUpdated = Date.now();
         const updatedProduct = await product.save();
         res.status(200).json(updatedProduct);
     } catch (error) {
