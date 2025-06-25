@@ -6,8 +6,7 @@ const swaggerJSDoc = require('swagger-jsdoc');
 const mongoose = require('mongoose');
 
 const connectDB = require('./configs/mongodb.config');
-const adminInventoryRoutes = require('./routes/admin.inventory.route');
-const customerInventoryRoutes = require('./routes/customer.inventory.route');
+const inventoryRoutes = require('./routes/inventory.route');
 
 // Load environment variables
 require('dotenv').config();
@@ -32,13 +31,13 @@ const swaggerOptions = {
         ],
         components: {
             schemas: {
-                Inventory: {
+                Product: {
                     type: 'object',
                     required: ['name', 'quantity', 'price', 'tags'],
                     properties: {
                         name: {
                             type: 'string',
-                            description: 'Name of the item',
+                            description: 'Name of the product',
                             default: ''
                         },
                         quantity: {
@@ -49,25 +48,31 @@ const swaggerOptions = {
                         },
                         description: {
                             type: 'string',
-                            description: 'Item description',
+                            description: 'Product description',
                             default: ''
                         },
                         price: {
                             type: 'number',
                             minimum: 0,
-                            description: 'Item price',
+                            description: 'Product price',
                             default: 0
-                        },                        tags: {
+                        },
+                        image: {
+                            type: 'string',
+                            description: 'Base64 encoded product image',
+                            default: ''
+                        },
+                        tags: {
                             type: 'array',
                             items: {
                                 type: 'string'
                             },
-                            description: 'Item tags/category',
-                            default: ["tag1", "tag2"]
+                            description: 'Product tags/categories',
+                            default: []
                         },
                         isActive: {
                             type: 'boolean',
-                            description: 'Whether the item is active',
+                            description: 'Whether the product is active',
                             default: true
                         },
                         lastUpdated: {
@@ -77,55 +82,28 @@ const swaggerOptions = {
                         }
                     }
                 },
-                InventoryResponse: {
+                ProductResponse: {
                     type: 'object',
-                    properties: {
-                        _id: {
-                            type: 'string',
-                            description: 'MongoDB document ID'
+                    allOf: [
+                        {
+                            type: 'object',
+                            properties: {
+                                _id: {
+                                    type: 'string',
+                                    description: 'MongoDB document ID'
+                                }
+                            }
                         },
-                        name: {
-                            type: 'string',
-                            description: 'Name of the item'
-                        },
-                        quantity: {
-                            type: 'number',
-                            minimum: 1,
-                            description: 'Current stock quantity'
-                        },
-                        description: {
-                            type: 'string',
-                            description: 'Item description'
-                        },
-                        price: {
-                            type: 'number',
-                            minimum: 0,
-                            description: 'Item price'
-                        },                        tags: {
-                            type: 'array',
-                            items: {
-                                type: 'string'
-                            },
-                            description: 'Item tags/category',
-                            default: ["tag1", "tag2"]
-                        },
-                        isActive: {
-                            type: 'boolean',
-                            description: 'Whether the item is active',
-                            default: true
-                        },
-                        lastUpdated: {
-                            type: 'string',
-                            format: 'date-time',
-                            description: 'Last update timestamp'
+                        {
+                            $ref: '#/components/schemas/Product'
                         }
-                    }
+                    ]
                 },
                 OrderRequest: {
                     type: 'object',
-                    required: ['id', 'quantity'],
+                    required: ['productId', 'quantity'],
                     properties: {
-                        id: {
+                        productId: {
                             type: 'string',
                             description: 'MongoDB _id of the product'
                         },
@@ -134,17 +112,6 @@ const swaggerOptions = {
                             minimum: 1,
                             description: 'Quantity to order',
                             default: 1
-                        },
-                        customerName: {
-                            type: 'string',
-                            description: 'Name of the customer',
-                            default: ''
-                        },
-                        customerEmail: {
-                            type: 'string',
-                            format: 'email',
-                            description: 'Email of the customer',
-                            default: ''
                         }
                     }
                 },
@@ -155,51 +122,30 @@ const swaggerOptions = {
                             type: 'string',
                             description: 'Unique order identifier'
                         },
+                        status: {
+                            type: 'string',
+                            enum: ['pending', 'completed', 'failed'],
+                            description: 'Order status'
+                        },
                         message: {
                             type: 'string',
-                            description: 'Order status message',
-                            default: 'Order processed successfully'
+                            description: 'Order status message'
                         },
-                        orderDetails: {
-                            type: 'object',
-                            properties: {
-                                productId: {
-                                    type: 'string',
-                                    description: 'MongoDB _id of the product'
-                                },
-                                name: {
-                                    type: 'string',
-                                    description: 'Name of the product'
-                                },
-                                quantity: {
-                                    type: 'number',
-                                    description: 'Quantity ordered',
-                                    minimum: 1
-                                },
-                                price: {
-                                    type: 'number',
-                                    description: 'Price per unit',
-                                    minimum: 0
-                                },
-                                totalPrice: {
-                                    type: 'number',
-                                    description: 'Total order price',
-                                    minimum: 0
-                                },
-                                customerName: {
-                                    type: 'string',
-                                    description: 'Name of the customer'
-                                },
-                                customerEmail: {
-                                    type: 'string',
-                                    description: 'Email of the customer'
-                                },
-                                orderDate: {
-                                    type: 'string',
-                                    format: 'date-time',
-                                    description: 'Date and time of the order'
-                                }
-                            }
+                        product: {
+                            $ref: '#/components/schemas/ProductResponse'
+                        },
+                        quantity: {
+                            type: 'number',
+                            description: 'Quantity ordered'
+                        },
+                        totalPrice: {
+                            type: 'number',
+                            description: 'Total order price'
+                        },
+                        createdAt: {
+                            type: 'string',
+                            format: 'date-time',
+                            description: 'Order creation timestamp'
                         }
                     }
                 },
@@ -208,28 +154,56 @@ const swaggerOptions = {
                     properties: {
                         available: {
                             type: 'boolean',
-                            description: 'Whether the requested quantity is available',
-                            default: false
+                            description: 'Whether the requested quantity is available'
                         },
-                        currentStock: {
-                            type: 'number',
-                            description: 'Current available quantity',
-                            minimum: 0,
-                            default: 0
-                        },
-                        name: {
-                            type: 'string',
-                            description: 'Name of the product'
+                        product: {
+                            $ref: '#/components/schemas/ProductResponse'
                         },
                         requestedQuantity: {
                             type: 'number',
-                            description: 'Quantity that was requested',
-                            minimum: 1
+                            description: 'Quantity that was requested'
                         },
                         message: {
                             type: 'string',
-                            description: 'Availability status message',
-                            default: 'Checking availability'
+                            description: 'Availability status message'
+                        }
+                    }
+                },
+                Statistics: {
+                    type: 'object',
+                    properties: {
+                        totalProducts: {
+                            type: 'number',
+                            description: 'Total number of products'
+                        },
+                        activeProducts: {
+                            type: 'number',
+                            description: 'Number of active products'
+                        },
+                        lowStockProducts: {
+                            type: 'number',
+                            description: 'Number of products with low stock'
+                        },
+                        totalValue: {
+                            type: 'number',
+                            description: 'Total value of inventory'
+                        },
+                        topTags: {
+                            type: 'array',
+                            items: {
+                                type: 'object',
+                                properties: {
+                                    tag: {
+                                        type: 'string',
+                                        description: 'Tag name'
+                                    },
+                                    count: {
+                                        type: 'number',
+                                        description: 'Number of products with this tag'
+                                    }
+                                }
+                            },
+                            description: 'Most used product tags'
                         }
                     }
                 },
@@ -238,8 +212,11 @@ const swaggerOptions = {
                     properties: {
                         message: {
                             type: 'string',
-                            description: 'Error message',
-                            default: 'An error occurred'
+                            description: 'Error message'
+                        },
+                        code: {
+                            type: 'string',
+                            description: 'Error code'
                         }
                     }
                 }
@@ -276,13 +253,16 @@ app.get('/api-docs', swaggerUi.setup(swaggerDocs, {
 }));
 
 // Routes
-app.use('/api/admin/inventory', adminInventoryRoutes);
-app.use('/api/customer/inventory', customerInventoryRoutes);
+app.use('/api/inventory', inventoryRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error(err.stack);
-    res.status(500).json({ message: 'Something went wrong!' });
+    const status = err.status || 500;
+    res.status(status).json({
+        message: err.message || 'Something went wrong!',
+        code: err.code || 'INTERNAL_SERVER_ERROR'
+    });
 });
 
 const PORT = process.env.PORT || 3000;

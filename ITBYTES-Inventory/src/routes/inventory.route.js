@@ -1,0 +1,216 @@
+const express = require('express');
+const router = express.Router();
+const inventoryController = require('../controllers/inventory.controller');
+
+/**
+ * @swagger
+ * /api/inventory/products:
+ *   get:
+ *     summary: Get all products
+ *     description: Retrieve all products with optional filtering
+ *     tags: [Inventory]
+ *     parameters:
+ *       - in: query
+ *         name: active
+ *         schema:
+ *           type: boolean
+ *         description: Filter by active status
+ *       - in: query
+ *         name: inStock
+ *         schema:
+ *           type: boolean
+ *         description: Filter for in-stock items only
+ *     responses:
+ *       200:
+ *         description: List of products
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/ProductResponse'
+ */
+router.get('/products', inventoryController.getAllProducts);
+
+/**
+ * @swagger
+ * /api/inventory/products/{id}:
+ *   get:
+ *     summary: Get a product by ID
+ *     tags: [Inventory]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Product ID
+ *     responses:
+ *       200:
+ *         description: Product details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ProductResponse'
+ */
+router.get('/products/:id', inventoryController.getProduct);
+
+/**
+ * @swagger
+ * /api/inventory/products:
+ *   post:
+ *     summary: Create a new product
+ *     tags: [Inventory]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Product'
+ *     responses:
+ *       201:
+ *         description: Product created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ProductResponse'
+ */
+router.post('/products', inventoryController.createProduct);
+
+/**
+ * @swagger
+ * /api/inventory/products/{id}:
+ *   put:
+ *     summary: Update a product
+ *     tags: [Inventory]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Product ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Product'
+ *     responses:
+ *       200:
+ *         description: Product updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ProductResponse'
+ */
+router.put('/products/:id', inventoryController.updateProduct);
+
+/**
+ * @swagger
+ * /api/inventory/products/{id}:
+ *   delete:
+ *     summary: Soft delete a product
+ *     tags: [Inventory]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Product ID
+ *     responses:
+ *       200:
+ *         description: Product deactivated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 product:
+ *                   $ref: '#/components/schemas/ProductResponse'
+ */
+router.delete('/products/:id', inventoryController.deleteProduct);
+
+/**
+ * @swagger
+ * /api/inventory/check-availability:
+ *   post:
+ *     summary: Check product availability
+ *     tags: [Inventory]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - id
+ *               - quantity
+ *             properties:
+ *               id:
+ *                 type: string
+ *               quantity:
+ *                 type: number
+ *                 minimum: 1
+ *     responses:
+ *       200:
+ *         description: Availability check result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AvailabilityResponse'
+ */
+router.post('/check-availability', inventoryController.checkAvailability);
+
+/**
+ * @swagger
+ * /api/inventory/order:
+ *   post:
+ *     summary: Process an order
+ *     tags: [Inventory]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - productId
+ *               - quantity
+ *             properties:
+ *               productId:
+ *                 type: string
+ *               quantity:
+ *                 type: number
+ *                 minimum: 1
+ *     responses:
+ *       200:
+ *         description: Order processed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/OrderResponse'
+ */
+router.post('/order', inventoryController.processOrder);
+
+/**
+ * @swagger
+ * /api/inventory/statistics:
+ *   get:
+ *     summary: Get inventory statistics
+ *     tags: [Inventory]
+ *     responses:
+ *       200:
+ *         description: Inventory statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Statistics'
+ */
+router.get('/statistics', inventoryController.getInventoryStats);
+
+// Export the router
+module.exports = router;
