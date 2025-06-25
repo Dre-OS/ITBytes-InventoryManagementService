@@ -3,7 +3,13 @@ const Inventory = require('../models/inventory.model');
 // Admin Controllers
 exports.getAllProducts = async (req, res) => {
     try {
-        const products = await Inventory.find();
+        // Get query parameter for including inactive products
+        const includeInactive = req.query.includeInactive === 'true';
+        
+        // Build query based on whether to include inactive products
+        const query = includeInactive ? {} : { isActive: true };
+        
+        const products = await Inventory.find(query);
         res.status(200).json(products);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -12,6 +18,7 @@ exports.getAllProducts = async (req, res) => {
 
 exports.getProduct = async (req, res) => {
     try {
+        // Include inactive products in single product lookup
         const product = await Inventory.findById(req.params.id);
         if (!product) {
             return res.status(404).json({ message: 'Product not found' });
@@ -53,11 +60,46 @@ exports.updateProduct = async (req, res) => {
 
 exports.deleteProduct = async (req, res) => {
     try {
-        const product = await Inventory.findByIdAndDelete(req.params.id);
+        const product = await Inventory.findById(req.params.id);
         if (!product) {
             return res.status(404).json({ message: 'Product not found' });
         }
-        res.status(200).json({ message: 'Product deleted successfully' });
+
+        // Implement soft delete by setting isActive to false
+        product.isActive = false;
+        await product.save();
+
+        res.status(200).json({ 
+            message: 'Product successfully deactivated',
+            productId: product._id,
+            productName: product.name,
+            deactivatedAt: new Date(),
+            note: 'Product has been marked as inactive and will not appear in customer listings'
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Add restore function to reactivate soft-deleted products
+exports.restoreProduct = async (req, res) => {
+    try {
+        const product = await Inventory.findById(req.params.id);
+        if (!product) {
+            return res.status(404).json({ message: 'Product not found' });
+        }
+
+        // Restore the product by setting isActive to true
+        product.isActive = true;
+        await product.save();
+
+        res.status(200).json({ 
+            message: 'Product successfully restored',
+            productId: product._id,
+            productName: product.name,
+            restoredAt: new Date(),
+            note: 'Product has been reactivated and will now appear in customer listings'
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

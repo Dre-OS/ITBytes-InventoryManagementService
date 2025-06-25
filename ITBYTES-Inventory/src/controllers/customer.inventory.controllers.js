@@ -1,6 +1,18 @@
 const mongoose = require('mongoose');
 const Inventory = require('../models/inventory.model');
 
+// Helper function to convert image data
+const convertImageData = (product) => {
+    const productObj = product.toObject();
+    if (productObj.image && productObj.image.data) {
+        productObj.image = {
+            data: `data:${productObj.image.contentType || 'image/jpeg'};base64,${productObj.image.data.toString('base64')}`,
+            contentType: productObj.image.contentType || 'image/jpeg'
+        };
+    }
+    return productObj;
+};
+
 // Customer Controllers
 exports.getAvailableProducts = async (req, res) => {
     try {
@@ -9,8 +21,12 @@ exports.getAvailableProducts = async (req, res) => {
             quantity: { $gt: 0 },
             isActive: true 
         });
-        res.status(200).json(products);
+
+        // Convert images for all products
+        const productsWithConvertedImages = products.map(convertImageData);
+        res.status(200).json(productsWithConvertedImages);
     } catch (error) {
+        console.error('Error fetching products:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -27,8 +43,11 @@ exports.getProductDetails = async (req, res) => {
             return res.status(404).json({ message: 'Product not found or out of stock' });
         }
 
-        res.status(200).json(product);
+        // Convert image data for the product
+        const productWithConvertedImage = convertImageData(product);
+        res.status(200).json(productWithConvertedImage);
     } catch (error) {
+        console.error('Error fetching product details:', error);
         res.status(500).json({ message: error.message });
     }
 };
