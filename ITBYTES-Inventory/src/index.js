@@ -26,7 +26,7 @@ const swaggerOptions = {
         },
         servers: [
             {
-                url: 'http://192.168.9.3:3000',
+                url: 'http://192.168.9.2:3000',
                 description: 'Inventory'
             }
         ],
@@ -252,9 +252,11 @@ const swaggerOptions = {
 const swaggerDocs = swaggerJSDoc(swaggerOptions);
 const app = express();
 
-// Middleware
+// Middleware with increased payload size limits
 app.use(cors());
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json({ limit: '50mb' }));
 
 // Basic route
 app.get('/', (req, res) => {
