@@ -51,9 +51,15 @@ const adminInventoryController = require('../controllers/admin.inventory.control
  *   get:
  *     summary: Get all products
  *     tags: [Admin]
+ *     parameters:
+ *       - in: query
+ *         name: includeInactive
+ *         schema:
+ *           type: boolean
+ *         description: Set to true to include inactive (soft-deleted) products
  *     responses:
  *       200:
- *         description: List of all products
+ *         description: List of products
  *         content:
  *           application/json:
  *             schema:
@@ -151,7 +157,7 @@ router.put('/products/:id', adminInventoryController.updateProduct);
  * @swagger
  * /api/admin/inventory/products/{id}:
  *   delete:
- *     summary: Delete a product
+ *     summary: Soft delete a product
  *     tags: [Admin]
  *     parameters:
  *       - in: path
@@ -162,11 +168,74 @@ router.put('/products/:id', adminInventoryController.updateProduct);
  *         description: MongoDB _id of the product
  *     responses:
  *       200:
- *         description: Product deleted successfully
+ *         description: Product soft deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Product successfully deactivated
+ *                 productId:
+ *                   type: string
+ *                   description: ID of the deactivated product
+ *                 productName:
+ *                   type: string
+ *                   description: Name of the deactivated product
+ *                 deactivatedAt:
+ *                   type: string
+ *                   format: date-time
+ *                   description: Timestamp of deactivation
+ *                 note:
+ *                   type: string
+ *                   description: Additional information about the deactivation
  *       404:
  *         description: Product not found
  */
 router.delete('/products/:id', adminInventoryController.deleteProduct);
+
+/**
+ * @swagger
+ * /api/admin/inventory/products/{id}/restore:
+ *   post:
+ *     summary: Restore a soft-deleted product
+ *     tags: [Admin]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: MongoDB _id of the product to restore
+ *     responses:
+ *       200:
+ *         description: Product restored successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Product successfully restored
+ *                 productId:
+ *                   type: string
+ *                   description: ID of the restored product
+ *                 productName:
+ *                   type: string
+ *                   description: Name of the restored product
+ *                 restoredAt:
+ *                   type: string
+ *                   format: date-time
+ *                   description: Timestamp of restoration
+ *                 note:
+ *                   type: string
+ *                   description: Additional information about the restoration
+ *       404:
+ *         description: Product not found
+ */
+router.post('/products/:id/restore', adminInventoryController.restoreProduct);
 
 /**
  * @swagger
