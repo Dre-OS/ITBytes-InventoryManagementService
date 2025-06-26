@@ -1,20 +1,25 @@
 const Inventory = require('../models/inventory.model');
 
+// Validate MongoDB ID
+const isValidObjectId = (id) => {
+    return id && id.match(/^[0-9a-fA-F]{24}$/);
+};
+
 const inventoryController = {
     // Get all products with optional filtering
     getAllProducts: async (req, res) => {
         try {
-            const { active, inStock } = req.query;
-            let query = {};
+            // const { active, inStock } = req.query;
+            // let query = {};
             
-            if (active !== undefined) {
-                query.isActive = active === 'true';
-            }
-            if (inStock === 'true') {
-                query.quantity = { $gt: 0 };
-            }
+            // if (active !== undefined) {
+            //     query.isActive = active === 'true';
+            // }
+            // if (inStock === 'true') {
+            //     query.quantity = { $gt: 0 };
+            // }
 
-            const products = await Inventory.find(query);
+            const products = await Inventory.find({isActive: true});
             res.json(products);
         } catch (error) {
             res.status(500).json({ 
@@ -89,25 +94,44 @@ const inventoryController = {
     // Soft delete a product
     deleteProduct: async (req, res) => {
         try {
-            const product = await Inventory.findByIdAndUpdate(
-                req.params.id,
-                { 
-                    isActive: false,
-                    lastUpdated: new Date()
-                },
-                { new: true }
-            );
+            const { id } = req.params;
+
+            // Validate ID
+            if (!id || !isValidObjectId(id)) {
+                return res.status(400).json({
+                    message: 'Invalid product ID',
+                    code: 'INVALID_ID'
+                });
+            }
+
+            const product = await Inventory.findById(id);
+
+            // Check if product exists
             if (!product) {
                 return res.status(404).json({ 
                     message: 'Product not found',
                     code: 'NOT_FOUND'
                 });
             }
+
+            // Check if product is already inactive
+            if (!product.isActive) {
+                return res.status(400).json({
+                    message: 'Product is already deactivated',
+                    code: 'ALREADY_INACTIVE'
+                });
+            }
+
+            // Perform soft delete
+            product.isActive = false;
+            await product.save();
+
             res.json({ 
                 message: 'Product deactivated successfully',
                 product 
             });
         } catch (error) {
+            console.error('Delete product error:', error);
             res.status(500).json({ 
                 message: 'Error deactivating product',
                 code: 'DELETE_ERROR'

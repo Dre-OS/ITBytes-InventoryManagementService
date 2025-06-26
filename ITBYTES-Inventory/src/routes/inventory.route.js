@@ -6,29 +6,47 @@ const inventoryController = require('../controllers/inventory.controller');
  * @swagger
  * /api/inventory/products:
  *   get:
- *     summary: Get all products
- *     description: Retrieve all products with optional filtering
+ *     summary: Get all products with filtering options
+ *     description: Retrieve products with optional filtering for active status and stock availability
  *     tags: [Inventory]
  *     parameters:
- *       - in: query
+ *       - in: query    
  *         name: active
  *         schema:
  *           type: boolean
- *         description: Filter by active status
+ *         description: Filter by active status (true/false). If not provided, returns all products
  *       - in: query
  *         name: inStock
  *         schema:
  *           type: boolean
- *         description: Filter for in-stock items only
+ *         description: Filter for in-stock items only (quantity > 0)
  *     responses:
  *       200:
- *         description: List of products
+ *         description: List of products with metadata
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/ProductResponse'
+ *               type: object
+ *               properties:
+ *                 total:
+ *                   type: number
+ *                   description: Total number of products in the response
+ *                 active:
+ *                   type: number
+ *                   description: Number of active products
+ *                 inactive:
+ *                   type: number
+ *                   description: Number of inactive products
+ *                 products:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/ProductResponse'
+ *       500:
+ *         description: Server error while fetching products
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.get('/products', inventoryController.getAllProducts);
 

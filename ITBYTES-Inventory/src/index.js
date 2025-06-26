@@ -33,7 +33,7 @@ const swaggerOptions = {
             schemas: {
                 Product: {
                     type: 'object',
-                    required: ['name', 'quantity', 'price', 'tags'],
+                    required: ['name', 'quantity', 'price', 'category', 'tags'],
                     properties: {
                         name: {
                             type: 'string',
@@ -62,12 +62,17 @@ const swaggerOptions = {
                             description: 'Base64 encoded product image',
                             default: ''
                         },
+                        category: {
+                            type: 'string',
+                            description: 'Product category',
+                            example: 'Electronics'
+                        },
                         tags: {
                             type: 'array',
                             items: {
                                 type: 'string'
                             },
-                            description: 'Product tags/categories',
+                            description: 'Product tags for additional categorization',
                             default: []
                         },
                         isActive: {
@@ -84,20 +89,57 @@ const swaggerOptions = {
                 },
                 ProductResponse: {
                     type: 'object',
-                    allOf: [
-                        {
-                            type: 'object',
-                            properties: {
-                                _id: {
-                                    type: 'string',
-                                    description: 'MongoDB document ID'
-                                }
-                            }
+                    properties: {
+                        id: {
+                            type: 'string',
+                            description: 'MongoDB document ID'
                         },
-                        {
-                            $ref: '#/components/schemas/Product'
+                        name: {
+                            type: 'string',
+                            description: 'Name of the product'
+                        },
+                        quantity: {
+                            type: 'number',
+                            description: 'Current stock quantity'
+                        },
+                        description: {
+                            type: 'string',
+                            description: 'Product description'
+                        },
+                        price: {
+                            type: 'number',
+                            description: 'Product price'
+                        },
+                        image: {
+                            type: 'string',
+                            description: 'Base64 encoded product image'
+                        },
+                        category: {
+                            type: 'string',
+                            description: 'Product category'
+                        },
+                        tags: {
+                            type: 'array',
+                            items: {
+                                type: 'string'
+                            },
+                            description: 'Product tags for additional categorization'
+                        },
+                        isActive: {
+                            type: 'boolean',
+                            description: 'Whether the product is active'
+                        },
+                        createdAt: {
+                            type: 'string',
+                            format: 'date-time',
+                            description: 'Creation timestamp'
+                        },
+                        updatedAt: {
+                            type: 'string',
+                            format: 'date-time',
+                            description: 'Last update timestamp'
                         }
-                    ]
+                    }
                 },
                 OrderRequest: {
                     type: 'object',

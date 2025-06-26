@@ -30,6 +30,11 @@ const inventorySchema = new mongoose.Schema({
             message: 'Image must be a valid base64 data URL'
         }
     },
+    category: {
+        type: String,
+        required: true,
+        trim: true
+    },
     tags: {
         type: [String],
         required: true,
