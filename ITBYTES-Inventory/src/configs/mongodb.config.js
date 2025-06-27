@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const connectDB = async () => {
     try {
-        const uri = process.env.MONGODB_URI || 'mongodb+srv://hedkkananayo:SNlqyQsqWsHuZXoe@itbytes-inventory.yigx9nb.mongodb.net/?retryWrites=true&w=majority&appName=ITBYTES-Inventory';
+        const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/itbytes_db';
         
         const connection = await mongoose.connect(uri, {
             dbName: 'itbytes_db',
