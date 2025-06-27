@@ -1,4 +1,4 @@
-const { publishMessage, QUEUES } = require('../../../src/configs/rabbitmq.config');
+const { publishMessage, QUEUES } = require('../configs/rabbitmq.config');
 const Inventory = require('../models/inventory.model');
 
 // Event handlers
