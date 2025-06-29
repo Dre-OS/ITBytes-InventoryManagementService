@@ -1,4 +1,5 @@
 const Inventory = require('../models/inventory.model');
+const { getConnectionStatus, QUEUES } = require('../configs/rabbitmq.config');
 
 // Validate MongoDB ID
 const isValidObjectId = (id) => {
@@ -6,6 +7,28 @@ const isValidObjectId = (id) => {
 };
 
 const inventoryController = {
+    // Test RabbitMQ connection
+    testRabbitMQConnection: async (req, res) => {
+        try {
+            const status = getConnectionStatus();
+            return res.status(200).json({
+                success: true,
+                status: {
+                    isConnected: status.isConnected,
+                    isConnecting: status.isConnecting,
+                    reconnectAttempts: status.reconnectAttempts,
+                    queues: Object.values(QUEUES)
+                }
+            });
+        } catch (error) {
+            console.error('RabbitMQ test failed:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to test RabbitMQ connection'
+            });
+        }
+    },
+
     // Get all products with optional filtering
     getAllProducts: async (req, res) => {
         try {
