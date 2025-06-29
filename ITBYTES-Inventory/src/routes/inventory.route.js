@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const inventoryController = require('../controllers/inventory.controller');
+const rabbitmq = require('../configs/rabbitmq.config');
 
 /**
  * @swagger
@@ -229,6 +230,67 @@ router.post('/order', inventoryController.processOrder);
  *               $ref: '#/components/schemas/Statistics'
  */
 router.get('/statistics', inventoryController.getInventoryStats);
+
+/**
+ * @swagger
+ * /api/inventory/rabbitmq-test:
+ *   get:
+ *     summary: Test RabbitMQ connection and send a test message
+ *     tags: [System]
+ *     responses:
+ *       200:
+ *         description: RabbitMQ connection test results
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 connection:
+ *                   type: object
+ *                   properties:
+ *                     isConnected:
+ *                       type: boolean
+ *                     isConnecting:
+ *                       type: boolean
+ *                     reconnectAttempts:
+ *                       type: number
+ *                 testMessage:
+ *                   type: object
+ *                   properties:
+ *                     sent:
+ *                       type: boolean
+ *                     queue:
+ *                       type: string
+ */
+router.get('/rabbitmq-test', async (req, res) => {
+    try {
+        const status = rabbitmq.getConnectionStatus();
+        
+        // Try to send a test message
+        let testMessageResult = { sent: false, queue: rabbitmq.QUEUES.INVENTORY_UPDATED };
+        
+        if (status.isConnected) {
+            await rabbitmq.publishMessage(rabbitmq.QUEUES.INVENTORY_UPDATED, {
+                test: true,
+                timestamp: new Date(),
+                message: 'RabbitMQ connection test'
+            });
+            testMessageResult.sent = true;
+        }
+
+        res.json({
+            connection: status,
+            testMessage: testMessageResult
+        });
+    } catch (error) {
+        console.error('RabbitMQ test failed:', error);
+        res.status(500).json({
+            error: 'RabbitMQ test failed',
+            message: error.message,
+            connection: rabbitmq.getConnectionStatus()
+        });
+    }
+});
 
 // Export the router
 module.exports = router;
