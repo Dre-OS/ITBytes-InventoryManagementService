@@ -1,4 +1,4 @@
-const { publishMessage, QUEUES } = require('../configs/rabbitmq.config');
+const { publishMessage, EXCHANGE, ROUTING_KEYS } = require('../configs/rabbitmq.config');
 const Inventory = require('../models/inventory.model');
 
 // Event handlers
@@ -22,32 +22,27 @@ const handleOrderCreated = async (orderData) => {
             product.quantity -= item.quantity;
             await product.save();
 
+            // Publish inventory updated event
+            await publishMessage(EXCHANGE.INVENTORY, ROUTING_KEYS.INVENTORY_UPDATED, {
+                productId: product.productId,
+                productName: product.name,
+                currentStock: product.quantity,
+                change: -item.quantity,
+                eventType: 'order_reservation'
+            });
+
             // Check if stock is low after reservation
             if (product.quantity < 10) {
-                await publishMessage(QUEUES.INVENTORY_LOW_STOCK, {
+                await publishMessage(EXCHANGE.INVENTORY, ROUTING_KEYS.INVENTORY_LOW_STOCK, {
                     productId: product.productId,
-                    productName: product.productName,
-                    currentStock: product.quantity
+                    productName: product.name,
+                    currentStock: product.quantity,
+                    threshold: 10
                 });
             }
         }
-
-        // Notify about inventory update
-        await publishMessage(QUEUES.INVENTORY_UPDATED, {
-            orderId: orderData.orderId,
-            status: 'reserved',
-            timestamp: new Date()
-        });
-
     } catch (error) {
         console.error('Error handling order creation:', error);
-        // Publish event about inventory reservation failure
-        await publishMessage(QUEUES.INVENTORY_UPDATED, {
-            orderId: orderData.orderId,
-            status: 'reservation_failed',
-            error: error.message,
-            timestamp: new Date()
-        });
         throw error;
     }
 };
@@ -67,7 +62,7 @@ const handleOrderCancelled = async (orderData) => {
         }
 
         // Notify about inventory update
-        await publishMessage(QUEUES.INVENTORY_UPDATED, {
+        await publishMessage(EXCHANGE.INVENTORY, ROUTING_KEYS.INVENTORY_UPDATED, {
             orderId: orderData.orderId,
             status: 'returned',
             timestamp: new Date()
@@ -83,7 +78,7 @@ const handlePaymentConfirmed = async (paymentData) => {
     try {
         // Payment confirmed, inventory has already been reserved
         // Just publish a confirmation event
-        await publishMessage(QUEUES.INVENTORY_UPDATED, {
+        await publishMessage(EXCHANGE.INVENTORY, ROUTING_KEYS.INVENTORY_UPDATED, {
             orderId: paymentData.orderId,
             status: 'confirmed',
             timestamp: new Date()
