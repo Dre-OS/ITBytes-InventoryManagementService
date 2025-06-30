@@ -1,5 +1,6 @@
 const Inventory = require('../models/inventory.model');
-const { getConnectionStatus, QUEUES } = require('../configs/rabbitmq.config');
+const { getConnectionStatus, EXCHANGE, ROUTING_KEYS } = require('../configs/rabbitmq.config');
+const { publishInventoryUpdate } = require('../events/inventory.events');
 
 // Validate MongoDB ID
 const isValidObjectId = (id) => {
@@ -17,7 +18,8 @@ const inventoryController = {
                     isConnected: status.isConnected,
                     isConnecting: status.isConnecting,
                     reconnectAttempts: status.reconnectAttempts,
-                    queues: Object.values(QUEUES)
+                    exchanges: Object.values(EXCHANGE),
+                    routingKeys: Object.values(ROUTING_KEYS)
                 }
             });
         } catch (error) {
@@ -79,6 +81,10 @@ const inventoryController = {
                 lastUpdated: new Date()
             });
             const savedProduct = await product.save();
+            
+            // Publish inventory created event
+            await publishInventoryUpdate(savedProduct, savedProduct.quantity, 'product_created');
+            
             res.status(201).json(savedProduct);
         } catch (error) {
             res.status(400).json({ 
@@ -91,6 +97,14 @@ const inventoryController = {
     // Update a product
     updateProduct: async (req, res) => {
         try {
+            const oldProduct = await Inventory.findById(req.params.id);
+            if (!oldProduct) {
+                return res.status(404).json({ 
+                    message: 'Product not found',
+                    code: 'NOT_FOUND'
+                });
+            }
+
             const updatedProduct = await Inventory.findByIdAndUpdate(
                 req.params.id,
                 {
@@ -99,12 +113,13 @@ const inventoryController = {
                 },
                 { new: true }
             );
-            if (!updatedProduct) {
-                return res.status(404).json({ 
-                    message: 'Product not found',
-                    code: 'NOT_FOUND'
-                });
-            }
+
+            // Calculate quantity change
+            const quantityChange = updatedProduct.quantity - oldProduct.quantity;
+            
+            // Publish inventory updated event
+            await publishInventoryUpdate(updatedProduct, quantityChange, 'product_updated');
+            
             res.json(updatedProduct);
         } catch (error) {
             res.status(400).json({ 
@@ -213,6 +228,9 @@ const inventoryController = {
             }
 
             await product.updateStock(-quantity);
+            
+            // Publish inventory updated event for order processing
+            await publishInventoryUpdate(product, -quantity, 'order_processed');
 
             res.json({
                 orderId: new Date().getTime().toString(),
