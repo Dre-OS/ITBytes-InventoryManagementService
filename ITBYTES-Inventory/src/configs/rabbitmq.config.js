@@ -2,14 +2,26 @@ const amqp = require('amqplib');
 
 const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqps://ohcjywzb:ObmX3HW1v4G15PE35c_LUdHKgx14ZEwJ@cougar.rmq.cloudamqp.com/ohcjywzb';
 
-// Queue names
-const QUEUES = {
+// Exchange and Queue configurations
+const EXCHANGE = {
+    INVENTORY: 'inventory.events',
+    ORDERS: 'orders.events'
+};
+
+const ROUTING_KEYS = {
+    INVENTORY_UPDATED: 'inventory.updated',
+    INVENTORY_LOW_STOCK: 'inventory.low_stock',
     ORDER_CREATED: 'order.created',
     ORDER_CANCELLED: 'order.cancelled',
     PAYMENT_CONFIRMED: 'payment.confirmed',
-    PAYMENT_FAILED: 'payment.failed',
-    INVENTORY_UPDATED: 'inventory.updated',
-    INVENTORY_LOW_STOCK: 'inventory.low_stock'
+    PAYMENT_FAILED: 'payment.failed'
+};
+
+// Default options for exchanges and queues
+const DEFAULT_OPTIONS = {
+    durable: true,
+    exclusive: false,
+    autoDelete: false
 };
 
 let channel, connection;
@@ -47,13 +59,10 @@ async function connectQueue() {
         channel = await connection.createChannel();
         console.log('RabbitMQ channel created');
 
-        // Assert all queues
-        for (const queue of Object.values(QUEUES)) {
-            await channel.assertQueue(queue, {
-                durable: true
-            });
-            console.log(`Queue ${queue} asserted successfully`);
-        }
+        // Assert exchanges
+        await channel.assertExchange(EXCHANGE.INVENTORY, 'topic', DEFAULT_OPTIONS);
+        await channel.assertExchange(EXCHANGE.ORDERS, 'topic', DEFAULT_OPTIONS);
+        console.log('Exchanges asserted successfully');
 
         // Reset reconnect attempts on successful connection
         reconnectAttempts = 0;
@@ -86,31 +95,45 @@ async function attemptReconnect() {
     }, 5000 * reconnectAttempts); // Increasing delay between attempts
 }
 
-async function publishMessage(queue, message) {
+async function publishMessage({ exchange, routingKey, message, options = DEFAULT_OPTIONS }) {
     try {
         if (!channel || !connection || connection.closed) {
             console.log('No active connection, attempting to connect...');
             await connectQueue();
         }
-        console.log(`Publishing message to queue: ${queue}`);
-        await channel.sendToQueue(queue, Buffer.from(JSON.stringify(message)));
+        console.log(`Publishing message to exchange: ${exchange} with routing key: ${routingKey}`);
+        await channel.publish(
+            exchange,
+            routingKey,
+            Buffer.from(JSON.stringify(message)),
+            options
+        );
         console.log('Message published successfully');
     } catch (error) {
-        console.error(`Error publishing message to queue ${queue}:`, error);
+        console.error(`Error publishing message to exchange ${exchange}:`, error);
         throw error;
     }
 }
 
-async function consumeMessage(queue, callback) {
+async function consumeMessage({ exchange, routingKey, queue, callback }) {
     try {
         if (!channel || !connection || connection.closed) {
             console.log('No active connection, attempting to connect...');
             await connectQueue();
         }
-        console.log(`Starting to consume messages from queue: ${queue}`);
-        await channel.consume(queue, (data) => {
+
+        // Assert a queue for this consumer
+        const queueResult = await channel.assertQueue(queue, DEFAULT_OPTIONS);
+        console.log(`Queue ${queueResult.queue} asserted successfully`);
+
+        // Bind the queue to the exchange with the routing key
+        await channel.bindQueue(queueResult.queue, exchange, routingKey);
+        console.log(`Queue bound to exchange ${exchange} with routing key ${routingKey}`);
+
+        console.log(`Starting to consume messages from queue: ${queueResult.queue}`);
+        await channel.consume(queueResult.queue, (data) => {
             if (data) {
-                console.log(`Received message from queue: ${queue}`);
+                console.log(`Received message from exchange: ${exchange}, routing key: ${routingKey}`);
                 try {
                     const message = JSON.parse(data.content);
                     callback(message);
@@ -122,9 +145,9 @@ async function consumeMessage(queue, callback) {
                 }
             }
         });
-        console.log(`Consumer setup complete for queue: ${queue}`);
+        console.log(`Consumer setup complete for queue: ${queueResult.queue}`);
     } catch (error) {
-        console.error(`Error setting up consumer for queue ${queue}:`, error);
+        console.error(`Error setting up consumer:`, error);
         throw error;
     }
 }
@@ -153,7 +176,8 @@ module.exports = {
     connectQueue,
     publishMessage,
     consumeMessage,
-    QUEUES,
+    EXCHANGE,
+    ROUTING_KEYS,
     getConnectionStatus: () => ({
         isConnected: !!(connection && !connection.closed),
         isConnecting,
