@@ -1,6 +1,6 @@
 const Inventory = require('../models/inventory.model');
-const { getConnectionStatus, EXCHANGE, ROUTING_KEYS } = require('../configs/rabbitmq.config');
-const { publishInventoryUpdate } = require('../events/inventory.events');
+const { getConnectionStatus, QUEUES } = require('../configs/rabbitmq.config');
+
 
 // Validate MongoDB ID
 const isValidObjectId = (id) => {
@@ -18,8 +18,8 @@ const inventoryController = {
                     isConnected: status.isConnected,
                     isConnecting: status.isConnecting,
                     reconnectAttempts: status.reconnectAttempts,
-                    exchanges: Object.values(EXCHANGE),
-                    routingKeys: Object.values(ROUTING_KEYS)
+                    queues: Object.values(QUEUES)
+
                 }
             });
         } catch (error) {
@@ -36,7 +36,7 @@ const inventoryController = {
         try {
             // const { active, inStock } = req.query;
             // let query = {};
-            
+
             // if (active !== undefined) {
             //     query.isActive = active === 'true';
             // }
@@ -81,10 +81,10 @@ const inventoryController = {
                 lastUpdated: new Date()
             });
             const savedProduct = await product.save();
-            
-            // Publish inventory created event
-            await publishInventoryUpdate(savedProduct, savedProduct.quantity, 'product_created');
-            
+
+
+
+
             res.status(201).json(savedProduct);
         } catch (error) {
             res.status(400).json({ 
@@ -97,14 +97,6 @@ const inventoryController = {
     // Update a product
     updateProduct: async (req, res) => {
         try {
-            const oldProduct = await Inventory.findById(req.params.id);
-            if (!oldProduct) {
-                return res.status(404).json({ 
-                    message: 'Product not found',
-                    code: 'NOT_FOUND'
-                });
-            }
-
             const updatedProduct = await Inventory.findByIdAndUpdate(
                 req.params.id,
                 {
@@ -113,13 +105,13 @@ const inventoryController = {
                 },
                 { new: true }
             );
+            if (!updatedProduct) {
+                return res.status(404).json({ 
+                    message: 'Product not found',
+                    code: 'NOT_FOUND'
+                });
+            }
 
-            // Calculate quantity change
-            const quantityChange = updatedProduct.quantity - oldProduct.quantity;
-            
-            // Publish inventory updated event
-            await publishInventoryUpdate(updatedProduct, quantityChange, 'product_updated');
-            
             res.json(updatedProduct);
         } catch (error) {
             res.status(400).json({ 
@@ -182,7 +174,7 @@ const inventoryController = {
         try {
             const { id, quantity } = req.body;
             const product = await Inventory.findById(id);
-            
+
             if (!product) {
                 return res.status(404).json({ 
                     message: 'Product not found',
@@ -212,7 +204,7 @@ const inventoryController = {
         try {
             const { productId, quantity } = req.body;
             const product = await Inventory.findById(productId);
-            
+
             if (!product) {
                 return res.status(404).json({ 
                     message: 'Product not found',
@@ -228,9 +220,9 @@ const inventoryController = {
             }
 
             await product.updateStock(-quantity);
-            
-            // Publish inventory updated event for order processing
-            await publishInventoryUpdate(product, -quantity, 'order_processed');
+
+
+
 
             res.json({
                 orderId: new Date().getTime().toString(),
@@ -258,11 +250,11 @@ const inventoryController = {
             // Calculate statistics
             const totalProducts = products.length;
             const activeProducts = products.filter(p => p.isActive).length;
-            
+
             // Calculate total value and collect tags
             let totalValue = 0;
             const tagCounts = {};
-            
+
             products.forEach(product => {
                 totalValue += product.price * product.quantity;
                 product.tags.forEach(tag => {
