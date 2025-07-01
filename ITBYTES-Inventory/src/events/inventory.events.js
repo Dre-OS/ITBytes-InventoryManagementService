@@ -1,48 +1,54 @@
-const { publishMessage, EXCHANGE, ROUTING_KEYS } = require('../configs/rabbitmq.config');
+const { publishMessage, QUEUES } = require('../configs/rabbitmq.config');
 const Inventory = require('../models/inventory.model');
 
 // Event handlers
 const handleOrderCreated = async (orderData) => {
     try {
         const { items } = orderData;
-        
+
         // Reserve inventory for each item
         for (const item of items) {
             const product = await Inventory.findOne({ productId: item.productId });
-            
+
             if (!product) {
                 throw new Error(`Product ${item.productId} not found`);
             }
-            
+
             if (product.quantity < item.quantity) {
                 throw new Error(`Insufficient stock for product ${item.productId}`);
             }
-            
+
             // Reserve the inventory
             product.quantity -= item.quantity;
             await product.save();
 
-            // Publish inventory updated event
-            await publishMessage(EXCHANGE.INVENTORY, ROUTING_KEYS.INVENTORY_UPDATED, {
-                productId: product.productId,
-                productName: product.name,
-                currentStock: product.quantity,
-                change: -item.quantity,
-                eventType: 'order_reservation'
-            });
-
             // Check if stock is low after reservation
             if (product.quantity < 10) {
-                await publishMessage(EXCHANGE.INVENTORY, ROUTING_KEYS.INVENTORY_LOW_STOCK, {
+                await publishMessage(QUEUES.INVENTORY_LOW_STOCK, {
                     productId: product.productId,
-                    productName: product.name,
-                    currentStock: product.quantity,
-                    threshold: 10
+                    productName: product.productName,
+                    currentStock: product.quantity
+
                 });
             }
         }
+
+        // Notify about inventory update
+        await publishMessage(QUEUES.INVENTORY_UPDATED, {
+            orderId: orderData.orderId,
+            status: 'reserved',
+            timestamp: new Date()
+        });
+
     } catch (error) {
         console.error('Error handling order creation:', error);
+        // Publish event about inventory reservation failure
+        await publishMessage(QUEUES.INVENTORY_UPDATED, {
+            orderId: orderData.orderId,
+            status: 'reservation_failed',
+            error: error.message,
+            timestamp: new Date()
+        });
         throw error;
     }
 };
@@ -50,11 +56,11 @@ const handleOrderCreated = async (orderData) => {
 const handleOrderCancelled = async (orderData) => {
     try {
         const { items } = orderData;
-        
+
         // Return inventory for each item
         for (const item of items) {
             const product = await Inventory.findOne({ productId: item.productId });
-            
+
             if (product) {
                 product.quantity += item.quantity;
                 await product.save();
@@ -62,7 +68,7 @@ const handleOrderCancelled = async (orderData) => {
         }
 
         // Notify about inventory update
-        await publishMessage(EXCHANGE.INVENTORY, ROUTING_KEYS.INVENTORY_UPDATED, {
+        await publishMessage(QUEUES.INVENTORY_UPDATED, {
             orderId: orderData.orderId,
             status: 'returned',
             timestamp: new Date()
@@ -78,7 +84,7 @@ const handlePaymentConfirmed = async (paymentData) => {
     try {
         // Payment confirmed, inventory has already been reserved
         // Just publish a confirmation event
-        await publishMessage(EXCHANGE.INVENTORY, ROUTING_KEYS.INVENTORY_UPDATED, {
+        await publishMessage(QUEUES.INVENTORY_UPDATED, {
             orderId: paymentData.orderId,
             status: 'confirmed',
             timestamp: new Date()
