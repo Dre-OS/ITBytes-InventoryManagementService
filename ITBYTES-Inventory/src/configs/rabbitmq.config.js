@@ -1,168 +1,118 @@
+const Inventory = require("../models/inventory.model");
 const amqp = require('amqplib');
+const { composePublisher } = require('rabbitmq-publisher');
 
-const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqps://ohcjywzb:ObmX3HW1v4G15PE35c_LUdHKgx14ZEwJ@cougar.rmq.cloudamqp.com/ohcjywzb';
-// Queue names
-const QUEUES = {
+const amqpuri = process.env.AMQP_URI || 'amqps://cjodwydd:5ycFMEa-7OilmVBsHMvPMrKSPI1ipii_@armadillo.rmq.cloudamqp.com/cjodwydd';
 
-    ORDER_CREATED: 'order.created',
-    ORDER_CANCELLED: 'order.cancelled',
-    PAYMENT_CONFIRMED: 'payment.confirmed',
-    PAYMENT_FAILED: 'payment.failed',
-    INVENTORY_UPDATED: 'inventory.updated',
-    INVENTORY_LOW_STOCK: 'inventory.low_stock'
+// Create a server object to store the connection
+const server = { 
+  connection: null, 
+  channel: null 
 };
 
-let channel, connection;
-let isConnecting = false;
-let reconnectAttempts = 0;
-const MAX_RECONNECT_ATTEMPTS = 5;
+// Initialize connection
+async function initRabbitMQ() {
+  try {
+    const connection = await amqp.connect(amqpuri);
+    const channel = await connection.createChannel();
+    server.connection = connection;
+    server.channel = channel;
+    console.log('Connected to RabbitMQ Publisher successfully');
+  } catch (err) {
+    console.error('Failed to connect to RabbitMQ:', err);
+  }
+}
 
-async function connectQueue() {
-    if (isConnecting) {
-        console.log('Connection attempt already in progress...');
-        return;
+// Initialize immediately
+initRabbitMQ();
+
+function createTopicPublisher(routingKey, exchange, queueName, options) {
+  return composePublisher({
+    exchange: exchange,
+    exchangeType: 'topic',
+    connectionUri: amqpuri,
+    routingKey: routingKey,
+    queue: queueName,
+    options: options || {
+      durable: true,
+      exclusive: false,
+      autoDelete: false
     }
+  });
+}
 
+const publisher = {
+  inventoryUpdated: createTopicPublisher('inventory.updated', 'inventory', 'inventory-events', null),
+  inventoryLowStock: createTopicPublisher('inventory.low_stock', 'inventory', 'inventory-events', null),
+  inventoryOutOfStock: createTopicPublisher('inventory.out_of_stock', 'inventory', 'inventory-events', null)
+};
+
+const MessagingController = {
+  updateInventory: async (req, res) => {
     try {
-        isConnecting = true;
-        console.log('Attempting to connect to RabbitMQ...');
+      const { id, quantity } = req.body;
+      const inventory = await Inventory.findById(id);
 
-        // Close existing connections if any
-        if (channel) await channel.close();
-        if (connection) await connection.close();
+      if (!inventory) {
+        return res.status(404).json({ error: 'Inventory item not found' });
+      }
 
-        connection = await amqp.connect(RABBITMQ_URL);
-        console.log('RabbitMQ connection established successfully');
+      try {
+        await inventory.updateStock(quantity);
 
-        connection.on('error', (err) => {
-            console.error('RabbitMQ connection error:', err);
-            attemptReconnect();
+        // Publish inventory update event
+        await publisher.inventoryUpdated({
+          id: inventory.id,
+          name: inventory.name,
+          quantity: inventory.quantity,
+          price: inventory.price,
+          category: inventory.category,
+          tags: inventory.tags,
+          isActive: inventory.isActive,
+          status: 'updated',
+          timestamp: new Date().toISOString()
         });
 
-        connection.on('close', () => {
-            console.log('RabbitMQ connection closed');
-            attemptReconnect();
+        // Check for low stock
+        if (inventory.quantity < 10 && inventory.quantity > 0) {
+          await publisher.inventoryLowStock({
+            id: inventory.id,
+            name: inventory.name,
+            quantity: inventory.quantity,
+            category: inventory.category,
+            threshold: 10,
+            status: 'low_stock',
+            timestamp: new Date().toISOString()
+          });
+        }
+
+        // Check for out of stock
+        if (inventory.quantity === 0) {
+          await publisher.inventoryOutOfStock({
+            id: inventory.id,
+            name: inventory.name,
+            category: inventory.category,
+            status: 'out_of_stock',
+            timestamp: new Date().toISOString()
+          });
+        }
+
+        res.status(201).end();
+      } catch (stockError) {
+        return res.status(201).error({ 
+          error: stockError.message,
+          code: 'INSUFFICIENT_STOCK'
         });
-
-        channel = await connection.createChannel();
-        console.log('RabbitMQ channel created');
-
-        // Assert all queues
-        for (const queue of Object.values(QUEUES)) {
-            await channel.assertQueue(queue, {
-                durable: true
-            });
-            console.log(`Queue ${queue} asserted successfully`);
-        }
-
-        // Reset reconnect attempts on successful connection
-        reconnectAttempts = 0;
-        isConnecting = false;
-
-        return channel;
-    } catch (error) {
-        console.error('Failed to connect to RabbitMQ:', error);
-        isConnecting = false;
-        await attemptReconnect();
-        throw error;
+      }
+    } catch (err) {
+      console.error('Inventory update error:', err);
+      res.status(400).json({ error: err.message });
     }
-}
-
-async function attemptReconnect() {
-    if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-        console.error('Max reconnection attempts reached. Please check your RabbitMQ connection.');
-        return;
-    }
-
-    reconnectAttempts++;
-    console.log(`Attempting to reconnect... (Attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
-
-    setTimeout(async () => {
-        try {
-            await connectQueue();
-        } catch (error) {
-            console.error('Reconnection attempt failed:', error);
-        }
-    }, 5000 * reconnectAttempts); // Increasing delay between attempts
-}
-
-async function publishMessage(queue, message) {
-    try {
-        if (!channel || !connection || connection.closed) {
-            console.log('No active connection, attempting to connect...');
-            await connectQueue();
-        }
-        console.log(`Publishing message to queue: ${queue}`);
-        await channel.sendToQueue(queue, Buffer.from(JSON.stringify(message)));
-
-
-
-
-
-        console.log('Message published successfully');
-    } catch (error) {
-        console.error(`Error publishing message to queue ${queue}:`, error);
-        throw error;
-    }
-}
-
-async function consumeMessage(queue, callback) {
-    try {
-        if (!channel || !connection || connection.closed) {
-            console.log('No active connection, attempting to connect...');
-            await connectQueue();
-        }
-        console.log(`Starting to consume messages from queue: ${queue}`);
-        await channel.consume(queue, (data) => {
-            if (data) {
-                console.log(`Received message from queue: ${queue}`);
-                try {
-                    const message = JSON.parse(data.content);
-                    callback(message);
-                    channel.ack(data);
-                    console.log('Message processed and acknowledged');
-                } catch (error) {
-                    console.error('Error processing message:', error);
-                    channel.nack(data, false, true); // Requeue the message
-                }
-            }
-        });
-        console.log(`Consumer setup complete for queue: ${queue}`);
-    } catch (error) {
-        console.error(`Error setting up consumer for queue ${queue}:`, error);
-        throw error;
-    }
-}
-
-process.on('exit', () => {
-    if (channel) channel.close();
-    if (connection) connection.close();
-});
-
-// Initialize connection when module is loaded
-connectQueue().catch(err => {
-    console.error('Initial RabbitMQ connection failed:', err);
-});
-
-// Keep the connection alive
-setInterval(() => {
-    if (!connection || connection.closed) {
-        console.log('Connection check: Reconnecting to RabbitMQ...');
-        connectQueue().catch(err => {
-            console.error('Periodic reconnection failed:', err);
-        });
-    }
-}, 10000); // Check every 10 seconds
+  }
+};
 
 module.exports = {
-    connectQueue,
-    publishMessage,
-    consumeMessage,
-    QUEUES,
-
-    getConnectionStatus: () => ({
-        isConnected: !!(connection && !connection.closed),
-        isConnecting,
-        reconnectAttempts
-    })
-};
+  server,
+  publisher,
+  MessagingController
+};  
