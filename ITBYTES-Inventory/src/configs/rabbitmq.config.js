@@ -1,6 +1,6 @@
 const Inventory = require("../models/inventory.model");
 const amqp = require('amqplib');
-const { composePublisher } = require('rabbitmq-publisher');
+const { connect, composePublisher } = require('rabbitmq-publisher');
 
 const amqpuri = process.env.AMQP_URI || 'amqps://cjodwydd:5ycFMEa-7OilmVBsHMvPMrKSPI1ipii_@armadillo.rmq.cloudamqp.com/cjodwydd';
 
@@ -14,7 +14,7 @@ const server = {
 async function initRabbitMQ() {
   try {
     const connection = await amqp.connect(amqpuri);
-    const channel = await connection.createChannel();
+    // const channel = await connection.createChannel();
     server.connection = connection;
     server.channel = channel;
     console.log('Connected to RabbitMQ Publisher successfully');
