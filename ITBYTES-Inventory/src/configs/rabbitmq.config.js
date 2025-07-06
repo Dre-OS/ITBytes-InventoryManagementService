@@ -13,7 +13,7 @@ const server = {
 // Initialize connection
 async function initRabbitMQ() {
   try {
-    const connection = await amqp.connect(amqpuri);
+    const {connection, channel} = await connect(amqpuri);
     // const channel = await connection.createChannel();
     server.connection = connection;
     server.channel = channel;
@@ -54,7 +54,7 @@ const MessagingController = {
       const inventory = await Inventory.findById(id);
 
       if (!inventory) {
-        return res.status(404).end;
+        return res.status(404).json({ error: 'Inventory not found' });
       }
 
       try {
@@ -99,14 +99,14 @@ const MessagingController = {
 
         res.status(201).end();
       } catch (stockError) {
-        return res.status(201).error({ 
+        return res.status(400).json({ 
           error: stockError.message,
           code: 'INSUFFICIENT_STOCK'
         });
       }
     } catch (err) {
       console.error('Inventory update error:', err);
-      res.status(400).end;
+      res.status(400).end();
     }
   }
 };
@@ -114,5 +114,5 @@ const MessagingController = {
 module.exports = {
   server,
   publisher,
-  MessagingController
+  MessagingController,
 };  
