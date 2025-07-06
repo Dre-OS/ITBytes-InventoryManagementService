@@ -54,7 +54,7 @@ const MessagingController = {
       const inventory = await Inventory.findById(id);
 
       if (!inventory) {
-        return res.status(404).json({ error: 'Inventory item not found' });
+        return res.status(404).end;
       }
 
       try {
@@ -106,7 +106,7 @@ const MessagingController = {
       }
     } catch (err) {
       console.error('Inventory update error:', err);
-      res.status(400).json({ error: err.message });
+      res.status(400).end;
     }
   }
 };
