@@ -4,12 +4,34 @@ const bodyParser = require('body-parser');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJSDoc = require('swagger-jsdoc');
 const mongoose = require('mongoose');
-
 const connectDB = require('./configs/mongodb.config');
 const inventoryRoutes = require('./routes/inventory.route');
+const rabbitExpress = require('rabbitmq-express');
+const messagingInventory = rabbitExpress();
+
 
 // Load environment variables
 require('dotenv').config();
+
+const { MessagingController } = require('./configs/rabbitmq.config');
+
+// Required for RabbitMQ listener
+const messagingConfig = {
+  rabbitURI: process.env.RABBITMQ_URL || 'amqp://guest:guest@localhost:5672',
+  exchangeType: 'topic',
+}
+
+
+messagingInventory.listen({
+  ...messagingConfig,
+  exchange: 'payment',
+  queue: 'payment-events',
+  routingKey: 'payment.*', // This will catch all order events
+  consumerOptions: { noAck: false }, // Enable explicit acknowledgments
+});                         
+
+// Then use separate middleware for different message types
+messagingInventory.use('payment.success', MessagingController.paymentSuccess);
 
 // Swagger Configuration
 const swaggerOptions = {
