@@ -1,6 +1,6 @@
 const Inventory = require("../models/inventory.model");
 const amqp = require('amqplib');
-const { connect, composePublisher } = require('rabbitmq-publisher');
+const {connect , composePublisher } = require('rabbitmq-publisher');
 
 const amqpuri = process.env.AMQP_URI || 'amqps://cjodwydd:5ycFMEa-7OilmVBsHMvPMrKSPI1ipii_@armadillo.rmq.cloudamqp.com/cjodwydd';
 
@@ -43,13 +43,14 @@ function createTopicPublisher(routingKey, exchange, queueName, options) {
 
 const publisher = {
   inventoryUpdated: createTopicPublisher('inventory.updated', 'inventory', 'inventory-events', null),
-  inventoryLowStock: createTopicPublisher('inventory.low_stock', 'inventory', 'inventory-events', null),
   inventoryOutOfStock: createTopicPublisher('inventory.out_of_stock', 'inventory', 'inventory-events', null)
 };
 
 const MessagingController = {
-  updateInventory: async (req, res) => {
+  paymentSuccess: async (req, res) => {
     try {
+      console.log('Payment success event received:');
+      publisher.inventoryUpdated(server.channel, Buffer.from(JSON.stringify(req.body)));
       const { id, quantity } = req.body;
       const inventory = await Inventory.findById(id);
 
@@ -73,19 +74,6 @@ const MessagingController = {
           timestamp: new Date().toISOString()
         });
 
-        // Check for low stock
-        if (inventory.quantity < 10 && inventory.quantity > 0) {
-          await publisher.inventoryLowStock({
-            id: inventory.id,
-            name: inventory.name,
-            quantity: inventory.quantity,
-            category: inventory.category,
-            threshold: 10,
-            status: 'low_stock',
-            timestamp: new Date().toISOString()
-          });
-        }
-
         // Check for out of stock
         if (inventory.quantity === 0) {
           await publisher.inventoryOutOfStock({
@@ -96,17 +84,18 @@ const MessagingController = {
             timestamp: new Date().toISOString()
           });
         }
-
+        res.awknowledged = true;
         res.status(201).end();
       } catch (stockError) {
+        res.awknowledged = false;
         return res.status(400).json({ 
           error: stockError.message,
           code: 'INSUFFICIENT_STOCK'
         });
       }
-    } catch (err) {
-      console.error('Inventory update error:', err);
-      res.status(400).end();
+    }catch (error) {
+      console.error('Error processing payment success:', error);
+      res.status(500).end();
     }
   }
 };
