@@ -49,6 +49,10 @@ const swaggerOptions = {
             {
                 url: 'http://192.168.9.2:3000',
                 description: 'Inventory'
+            },
+            {
+                url: 'http://localhost:3000',
+                description: 'Local Inventory'
             }
         ],
         components: {
