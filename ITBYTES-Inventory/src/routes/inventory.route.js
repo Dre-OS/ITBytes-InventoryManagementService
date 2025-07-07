@@ -279,7 +279,7 @@ router.get('/statistics', inventoryController.getInventoryStats);
  *                   type: string
  *                   example: Failed to test RabbitMQ connection
  */
-router.get('/test/rabbitmq', inventoryController.testRabbitMQConnection);
+router.get('/test/rabbitmq', inventoryController.testRabbitMQSend);
 
 // Export the router
 module.exports = router;
