@@ -2,7 +2,7 @@ const Inventory = require("../models/inventory.model");
 const amqp = require('amqplib');
 const {connect , composePublisher } = require('rabbitmq-publisher');
 
-const amqpuri = process.env.AMQP_URI || 'amqps://cjodwydd:5ycFMEa-7OilmVBsHMvPMrKSPI1ipii_@armadillo.rmq.cloudamqp.com/cjodwydd';
+const amqpuri = process.env.AMQP_URI || 'amqp://guest:guest@localhost:5672';
 
 // Create a server object to store the connection
 const server = { 
