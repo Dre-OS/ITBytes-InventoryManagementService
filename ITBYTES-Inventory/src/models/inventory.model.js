@@ -17,7 +17,7 @@ const inventorySchema = new mongoose.Schema({
     },
     price: {
         type: Number,
-        required: true,
+        required: false,
         min: [0, 'Price cannot be negative']
     },
     image: {
@@ -32,7 +32,7 @@ const inventorySchema = new mongoose.Schema({
     },
     category: {
         type: String,
-        required: true,
+        required: false,
         trim: true
     },
     tags: {
