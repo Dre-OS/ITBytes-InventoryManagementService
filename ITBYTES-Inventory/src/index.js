@@ -1,3 +1,5 @@
+// Load environment variables
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
@@ -10,8 +12,7 @@ const rabbitExpress = require('rabbitmq-express');
 const messagingInventory = rabbitExpress();
 
 
-// Load environment variables
-require('dotenv').config();
+
 
 const { MessagingController } = require('./configs/rabbitmq.config');
 
