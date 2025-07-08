@@ -318,5 +318,149 @@ router.get('/statistics', inventoryController.getInventoryStats);
  */
 router.get('/test/rabbitmq', inventoryController.testRabbitMQSend);
 
+
+
+/**
+ * @swagger
+ * /api/inventory/product-in:
+ *   post:
+ *     summary: Create a new product input request
+ *     tags: [Inventory In]
+ *     description: Creates a new product input request with pending approval status
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - quantity
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Name of the product
+ *               quantity:
+ *                 type: number
+ *                 description: Quantity of the product
+ *     responses:
+ *       201:
+ *         description: Product input request created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 _id:
+ *                   type: string
+ *                   description: The auto-generated id
+ *                 name:
+ *                   type: string
+ *                   description: Product name
+ *                 quantity:
+ *                   type: number
+ *                   description: Product quantity
+ *                 isApproved:
+ *                   type: boolean
+ *                   description: Approval status (default false)
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Name and quantity are required
+ *                 code:
+ *                   type: string
+ *                   example: VALIDATION_ERROR
+ */
+router.post('/product-in', inventoryController.createProductIn);
+
+/**
+ * @swagger
+ * /api/inventory/product-in/{id}:
+ *   put:
+ *     summary: Update a product input request
+ *     tags: [Inventory In]
+ *     description: Updates an existing product input including its details and approval status
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The product input ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Updated name of the product
+ *               quantity:
+ *                 type: number
+ *                 description: Updated quantity
+ *               isApproved:
+ *                 type: boolean
+ *                 description: Updated approval status
+ *     responses:
+ *       200:
+ *         description: Product input updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 _id:
+ *                   type: string
+ *                   description: The product input ID
+ *                 name:
+ *                   type: string
+ *                   description: Updated product name
+ *                 quantity:
+ *                   type: number
+ *                   description: Updated quantity
+ *                 isApproved:
+ *                   type: boolean
+ *                   description: Updated approval status
+ *                 lastUpdated:
+ *                   type: string
+ *                   format: date-time
+ *                   description: Update timestamp
+ *       400:
+ *         description: Invalid request or ID format
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Invalid product ID
+ *                 code:
+ *                   type: string
+ *                   example: UPDATE_ERROR
+ *       404:
+ *         description: Product input not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Product not found
+ *                 code:
+ *                   type: string
+ *                   example: NOT_FOUND
+ */
+router.put('/product-in/:id', inventoryController.updateProductIn);
+
 // Export the router
 module.exports = router;
