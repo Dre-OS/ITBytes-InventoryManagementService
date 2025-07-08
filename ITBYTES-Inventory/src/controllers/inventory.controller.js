@@ -55,6 +55,74 @@ const inventoryController = {
     //         });
     //     }
     // },
+    createProductIn: async (req, res) => {
+    try {
+        // Validate required fields
+        const { name, quantity } = req.body;
+        if (!name || !quantity) {
+            return res.status(400).json({
+                message: 'Name and quantity are required',
+                code: 'VALIDATION_ERROR'
+            });
+        }
+
+        // Create new product
+        const product = new InventoryIn({
+            name,
+            quantity,
+            isApproved: false,
+            lastUpdated: new Date()
+        });
+
+        const savedProduct = await product.save();
+        res.status(201).json(savedProduct);
+    } catch (error) {
+        res.status(400).json({ 
+            message: error.message,
+            code: 'VALIDATION_ERROR'
+        });
+    }
+},
+    updateProductIn: async (req, res) => {
+    try {
+        // Validate ID
+        if (!isValidObjectId(req.params.id)) {
+            return res.status(400).json({
+                message: 'Invalid product ID',
+                code: 'INVALID_ID'
+            });
+        }
+
+        // Only allow updating specific fields
+        const { name, quantity, isApproved } = req.body;
+        const updateData = {
+            ...(name && { name }),
+            ...(quantity && { quantity }),
+            ...(isApproved !== undefined && { isApproved }),
+            lastUpdated: new Date()
+        };
+
+        const updatedProduct = await InventoryIn.findByIdAndUpdate(
+            req.params.id,
+            updateData,
+            { new: true }
+        );
+
+        if (!updatedProduct) {
+            return res.status(404).json({ 
+                message: 'Product not found',
+                code: 'NOT_FOUND'
+            });
+        }
+
+        res.json(updatedProduct);
+    } catch (error) {
+        res.status(400).json({ 
+            message: error.message,
+            code: 'UPDATE_ERROR'
+        });
+    }
+},
     addStockWhenNameExist: async (req, res) => {
         try {
             const { name, quantity } = req.body;
@@ -126,26 +194,6 @@ const inventoryController = {
             });
         }
     },
-
-     // Create a new productIn
-    createProductIn: async (req, res) => {
-        try {
-            const product = new InventoryIn({
-                name: req.body.name,
-                quantity: req.body.quantity,
-                isApproved: false
-
-            });
-            const savedProduct = await product.save();
-            res.status(201).json(savedProduct);
-        } catch (error) {
-            res.status(400).json({ 
-                message: error.message,
-                code: 'VALIDATION_ERROR'
-            });
-        }
-    },
-
     // Create a new product
     createProduct: async (req, res) => {
         try {
@@ -166,59 +214,6 @@ const inventoryController = {
             });
         }
     },
-    // Update a product
-    updateProductIn: async (req, res) => {
-        try {
-            const updatedProduct = await InventoryIn.findByIdAndUpdate(
-                req.params.id,
-                {
-                    ...req.body,
-                    lastUpdated: new Date()
-                },
-                { new: true }
-            );
-            if (!updatedProduct) {
-                return res.status(404).json({ 
-                    message: 'Product not found',
-                    code: 'NOT_FOUND'
-                });
-            }
-
-            res.json(updatedProduct);
-        } catch (error) {
-            res.status(400).json({ 
-                message: error.message,
-                code: 'UPDATE_ERROR'
-            });
-        }
-    },
-    // Update a product
-    updateProduct: async (req, res) => {
-        try {
-            const updatedProduct = await Inventory.findByIdAndUpdate(
-                req.params.id,
-                {
-                    ...req.body,
-                    lastUpdated: new Date()
-                },
-                { new: true }
-            );
-            if (!updatedProduct) {
-                return res.status(404).json({ 
-                    message: 'Product not found',
-                    code: 'NOT_FOUND'
-                });
-            }
-
-            res.json(updatedProduct);
-        } catch (error) {
-            res.status(400).json({ 
-                message: error.message,
-                code: 'UPDATE_ERROR'
-            });
-        }
-    },
-
     // Soft delete a product
     deleteProduct: async (req, res) => {
         try {
