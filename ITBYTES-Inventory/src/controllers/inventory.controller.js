@@ -1,4 +1,5 @@
 const Inventory = require('../models/inventory.model');
+const InventoryIn = require('../models/inventory.in.model')
 const { publisher, MessagingController } = require('../configs/rabbitmq.config');
 
 //test RabbitMQ connection
@@ -59,9 +60,10 @@ const inventoryController = {
             const { name, quantity } = req.body;
             const exiting = await Inventory.findOne({ name, isActive: true });
             if (!exiting) {
-                return res.status(404).json({
-                    message: 'Product not found',
-                    code: 'NOT_FOUND'
+               await InventoryIn.create({
+                    name: name,
+                    quantity: quantity,
+                    lastUpdated: new Date()
                 });
             }
             else {
