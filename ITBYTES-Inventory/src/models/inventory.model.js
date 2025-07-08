@@ -85,4 +85,5 @@ inventorySchema.statics.findLowStock = function(threshold = 10) {
     });
 };
 
-module.exports = mongoose.model('Inventory', inventorySchema);
+const Inventory = mongoose.model('Inventory', inventorySchema);
+module.exports = Inventory;
