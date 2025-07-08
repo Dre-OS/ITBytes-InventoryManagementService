@@ -54,7 +54,35 @@ const inventoryController = {
     //         });
     //     }
     // },
-
+    addStockWhenNameExist: async (req, res) => {
+        try {
+            const { name, quantity } = req.body;
+            const exiting = await Inventory.findOne({ name, isActive: true });
+            if (!exiting) {
+                return res.status(404).json({
+                    message: 'Product not found',
+                    code: 'NOT_FOUND'
+                });
+            }
+            else {
+                // Update stock quantity
+                exiting.quantity += quantity;
+                const updatedProduct = await exiting.save();
+                // Publish to RabbitMQ
+                // publisher.inventoryUpdated(server.channel, Buffer.from(JSON.stringify(updatedProduct)));
+                res.json({
+                    message: 'Stock updated successfully',
+                    product: updatedProduct
+                });
+            }
+        } catch (error) {
+            console.error('Error adding stock:', error);
+            res.status(500).json({
+                message: 'Error adding stock',
+                code: 'ADD_STOCK_ERROR'
+            });
+        }
+    },
     // Get all products with optional filtering
     getAllProducts: async (req, res) => {
         try {
