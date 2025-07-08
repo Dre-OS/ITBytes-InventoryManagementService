@@ -127,6 +127,25 @@ const inventoryController = {
         }
     },
 
+     // Create a new productIn
+    createProductIn: async (req, res) => {
+        try {
+            const product = new InventoryIn({
+                name: req.body.name,
+                quantity: req.body.quantity,
+                isApproved: false
+
+            });
+            const savedProduct = await product.save();
+            res.status(201).json(savedProduct);
+        } catch (error) {
+            res.status(400).json({ 
+                message: error.message,
+                code: 'VALIDATION_ERROR'
+            });
+        }
+    },
+
     // Create a new product
     createProduct: async (req, res) => {
         try {
@@ -147,7 +166,32 @@ const inventoryController = {
             });
         }
     },
+    // Update a product
+    updateProductIn: async (req, res) => {
+        try {
+            const updatedProduct = await InventoryIn.findByIdAndUpdate(
+                req.params.id,
+                {
+                    ...req.body,
+                    lastUpdated: new Date()
+                },
+                { new: true }
+            );
+            if (!updatedProduct) {
+                return res.status(404).json({ 
+                    message: 'Product not found',
+                    code: 'NOT_FOUND'
+                });
+            }
 
+            res.json(updatedProduct);
+        } catch (error) {
+            res.status(400).json({ 
+                message: error.message,
+                code: 'UPDATE_ERROR'
+            });
+        }
+    },
     // Update a product
     updateProduct: async (req, res) => {
         try {
