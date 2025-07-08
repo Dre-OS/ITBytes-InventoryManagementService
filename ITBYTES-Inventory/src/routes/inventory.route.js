@@ -127,6 +127,43 @@ router.put('/products/:id', inventoryController.updateProduct);
 
 /**
  * @swagger
+ * /api/inventory/products/in:
+ *   post:
+ *     summary: Add stock to existing product by name
+ *     tags: [Inventory]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - quantity
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Name of the existing product
+ *               quantity:
+ *                 type: number
+ *                 minimum: 1
+ *                 description: Quantity to add to existing stock
+ *     responses:
+ *       200:
+ *         description: Stock added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ProductResponse'
+ *       404:
+ *         description: Product not found
+ *       400:
+ *         description: Invalid input
+ */
+router.post('/products/in', inventoryController.addStockWhenNameExist);
+
+/**
+ * @swagger
  * /api/inventory/products/{id}:
  *   delete:
  *     summary: Soft delete a product
