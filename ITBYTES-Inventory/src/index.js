@@ -1,5 +1,6 @@
 // Load environment variables
 require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
@@ -11,28 +12,34 @@ const inventoryRoutes = require('./routes/inventory.route');
 const rabbitExpress = require('rabbitmq-express');
 const messagingInventory = rabbitExpress();
 
-
-
-
 const { MessagingController } = require('./configs/rabbitmq.config');
 
 // Required for RabbitMQ listener
 const messagingConfig = {
-  rabbitURI: process.env.RABBITMQ_URL || 'amqp://guest:guest@localhost:5672',
+  rabbitURI: process.env.CLOUDAMQP_URL || process.env.RABBITMQ_URL || 'amqp://guest:guest@localhost:5672',
   exchangeType: 'topic',
 }
 
-
-messagingInventory.listen({
-  ...messagingConfig,
-  exchange: 'payment',
-  queue: 'payment-events',
-  routingKey: 'payment.*', // This will catch all order events
-  consumerOptions: { noAck: false }, // Enable explicit acknowledgments
-});                         
-
-// Then use separate middleware for different message types
-messagingInventory.use('payment.success', MessagingController.paymentSuccess);
+// Setup RabbitMQ messaging with error handling
+const setupMessaging = async () => {
+  try {
+    await messagingInventory.listen({
+      ...messagingConfig,
+      exchange: 'payment',
+      queue: 'payment-events',
+      routingKey: 'payment.*', // This will catch all order events
+      consumerOptions: { noAck: false }, // Enable explicit acknowledgments
+    });
+    
+    // Then use separate middleware for different message types
+    messagingInventory.use('payment.success', MessagingController.paymentSuccess);
+    
+    console.log('RabbitMQ messaging setup completed successfully');
+  } catch (error) {
+    console.warn('Warning: Failed to setup RabbitMQ messaging:', error.message);
+    console.log('Application will continue without RabbitMQ functionality');
+  }
+};
 
 // Swagger Configuration
 const swaggerOptions = {
@@ -48,7 +55,7 @@ const swaggerOptions = {
         },
         servers: [
             {
-                url: 'http://192.168.9.2:3000',
+                url: 'http://192.168.100.92:3000',
                 description: 'Inventory'
             },
             {
@@ -342,12 +349,15 @@ const startServer = async () => {
         await connectDB();
         console.log('Connected to MongoDB successfully');
         
+        // Setup RabbitMQ messaging
+        await setupMessaging();
+
         app.listen(PORT, () => {
             console.log(`Inventory Management Service is running on port ${PORT}`);
             console.log(`Swagger documentation is available at http://localhost:${PORT}/api-docs`);
         });
     } catch (error) {
-        console.error('Failed to connect to MongoDB:', error);
+        console.error('Failed to connect to MongoDB or setup messaging:', error);
         process.exit(1);
     }
 };
