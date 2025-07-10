@@ -408,6 +408,7 @@ const inventoryController = {
 
             // Create new product
             const product = new InventoryIn({
+                productId: req.body.productId || null, // Optional field
                 name,
                 quantity,
                 isApproved: false,
@@ -438,6 +439,7 @@ const inventoryController = {
             // Only allow updating specific fields
             const { name, quantity, isApproved } = req.body;
             const updateData = {
+                ...(productId && { productId }),
                 ...(name && { name }),
                 ...(quantity && { quantity }),
                 ...(isApproved !== undefined && { isApproved }),
