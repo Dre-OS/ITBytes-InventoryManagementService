@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 
 const inventorySchema = new mongoose.Schema({
+    productId: {
+        type: String,
+        required: true,
+    },
     name: {
         type: String,
         required: true,
@@ -10,16 +14,6 @@ const inventorySchema = new mongoose.Schema({
         type: Number,
         required: true,
         min: [0, 'Quantity cannot be negative']
-    },
-    price: {
-        type: Number,
-        required: false,
-        min: [0, 'Price cannot be negative']
-    },
-    category: {
-        type: String,
-        required: false,
-        trim: true
     },
     isApproved: {
         type: Boolean,
