@@ -56,12 +56,17 @@ const inventoryController = {
     // },
     addStockWhenNameExist: async (req, res) => {
         try {
-            const { name, quantity } = req.body;
-            const exiting = await Inventory.findOne({ name, isActive: true });
+            const { productId, name, quantity, category,description, price, tags } = req.body;
+            const exiting = await Inventory.findOne({ productId, isActive: true });
             if (!exiting) {
-               await InventoryIn.create({
+               await Inventory.create({
+                    productId: productId,
                     name: name,
                     quantity: quantity,
+                    category: category,
+                    description: description,
+                    price: price,
+                    tags: tags,   
                     lastUpdated: new Date()
                 });
             }
@@ -76,6 +81,24 @@ const inventoryController = {
                     product: updatedProduct
                 });
             }
+            const result = await InventoryIn.findOneAndUpdate(
+                { productId: productId, isApproved: false },
+                { isDeleted: true })
+                if (!result) {
+                    console.error('No product input request found to delete');
+                } else console.log('Stock added successfully:', result);
+            res.status(201).json({
+                message: 'Stock added successfully',
+                product: {
+                    productId: productId,
+                    name: name,
+                    quantity: quantity,
+                    category: category,
+                    description: description,
+                    price: price,
+                    tags: tags
+                }
+            });
         } catch (error) {
             console.error('Error adding stock:', error);
             res.status(500).json({
@@ -510,8 +533,55 @@ const inventoryController = {
             code: 'CHECK_PRODUCT_ERROR'
             });
         }
-    }
+    },
 
+    // Soft delete a product
+    deleteProductIn: async (req, res) => {
+        try {
+            const { productId } = req.params;
+
+            // Validate ID
+            if (!id || !isValidObjectId(id)) {
+                return res.status(400).json({
+                    message: 'Invalid product ID',
+                    code: 'INVALID_ID'
+                });
+            }
+
+            const product = await InventoryIn.findById(productId);
+
+            // Check if product exists
+            if (!product) {
+                return res.status(404).json({ 
+                    message: 'Product not found',
+                    code: 'NOT_FOUND'
+                });
+            }
+
+            // Check if product is already inactive
+            if (!product.isDeleted) {
+                return res.status(400).json({
+                    message: 'Product is already deactivated',
+                    code: 'ALREADY_INACTIVE'
+                });
+            }
+
+            // Perform soft delete
+            product.isDeleted = false;
+            await product.save();
+
+            res.json({ 
+                message: 'Product deactivated successfully',
+                product 
+            });
+        } catch (error) {
+            console.error('Delete product error:', error);
+            res.status(500).json({ 
+                message: 'Error deactivating product',
+                code: 'DELETE_ERROR'
+            });
+        }
+    }
 };
 
 module.exports = inventoryController;
