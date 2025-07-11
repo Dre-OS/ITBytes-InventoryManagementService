@@ -437,12 +437,16 @@ router.put('/product-in/:id', inventoryController.updateProductIn);
  *           schema:
  *             type: object
  *             required:
+ *               - productId
  *               - name
  *               - quantity
  *             properties:
+ *               productId:
+ *                 type: string
+ *                 description: ID of the existing product
  *               name:
  *                 type: string
- *                 description: Name of the existing product
+ *                 description: Name of the product to add stock to
  *               quantity:
  *                 type: number
  *                 minimum: 1
@@ -460,6 +464,64 @@ router.put('/product-in/:id', inventoryController.updateProductIn);
  *         description: Invalid input
  */
 router.post('/products/in', inventoryController.addStockWhenNameExist);
+
+
+/**
+ * @swagger
+ * /api/inventory/product-in:
+ *   get:
+ *     summary: Get all product input requests
+ *     tags: [Inventory In]
+ *     description: Retrieves a list of all product input requests, including pending and approved ones
+ *     responses:
+ *       200:
+ *         description: List of product input requests
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   _id:
+ *                     type: string
+ *                     description: The auto-generated id
+ *                   name:
+ *                     type: string
+ *                     description: Product name
+ *                   quantity:
+ *                     type: number
+ *                     description: Product quantity
+ *                   isApproved:
+ *                     type: boolean
+ *                     description: Approval status
+ *                   createdAt:
+ *                     type: string
+ *                     format: date-time
+ *                     description: Creation timestamp
+ *                   lastUpdated:
+ *                     type: string
+ *                     format: date-time
+ *                     description: Last update timestamp
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Failed to retrieve product input requests
+ *                 code:
+ *                   type: string
+ *                   example: SERVER_ERROR
+ */
+router.get('/product-in', inventoryController.getProductsIn);
+
+
+
+router.get('/product-in/exists', inventoryController.confirmExistingProduct);
 
 // Export the router
 module.exports = router;
