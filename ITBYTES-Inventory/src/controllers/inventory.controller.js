@@ -467,6 +467,50 @@ const inventoryController = {
             });
         }
     },
+    getProductsIn: async (req, res) => {
+        try {
+            const productsIn = await InventoryIn.find();
+            res.json(productsIn);
+        } catch (error) {
+            res.status(500).json({ 
+                message: 'Error fetching product input requests',
+                code: 'FETCH_ERROR'
+            });
+        }
+    },
+    confirmExistingProduct: async (req, res) => {
+        try {
+            const { productId } = req.body;
+            
+            // Validate that productId is provided
+            if (!productId || !isValidObjectId(productId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid productId format',
+                code: 'INVALID_ID'
+            });
+            }
+            
+            // Check if product exists in inventory
+            const product = await Inventory.findById(productId);
+            
+            return res.status(200).json({
+            success: true,
+            exists: !!product,
+            product: product ? {
+                id: product._id,
+                name: product.name
+            } : null
+            });
+        } catch (error) {
+            console.error('Error checking product existence:', error);
+            res.status(500).json({
+            success: false,
+            message: 'Error checking if product exists',
+            code: 'CHECK_PRODUCT_ERROR'
+            });
+        }
+    }
 
 };
 
