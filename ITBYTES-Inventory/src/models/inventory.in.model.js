@@ -18,7 +18,12 @@ const inventorySchema = new mongoose.Schema({
     isApproved: {
         type: Boolean,
         default: false
+    },
+    isDeleted: {
+        type: Boolean,
+        default: false
     }
+    
 },
 {timestamps: true});
 
