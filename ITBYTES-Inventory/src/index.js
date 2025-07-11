@@ -55,7 +55,7 @@ const swaggerOptions = {
         },
         servers: [
             {
-                url: 'http://192.168.9.2:3000',
+                url: 'http://192.168.9.5:3002',
                 description: 'Inventory'
             },
             {
