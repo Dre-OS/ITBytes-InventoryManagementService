@@ -519,9 +519,121 @@ router.post('/products/in', inventoryController.addStockWhenNameExist);
  */
 router.get('/product-in', inventoryController.getProductsIn);
 
-
-
+/**
+ * @swagger
+ * /api/inventory/product-in/exists:
+ *   get:
+ *     summary: Check if a product exists by productId
+ *     tags: [Inventory In]
+ *     description: Verifies if a product with the given productId exists in the inventory
+ *     parameters:
+ *       - in: query
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The productId to check
+ *     responses:
+ *       200:
+ *         description: Product existence check result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   description: Operation success status
+ *                 exists:
+ *                   type: boolean
+ *                   description: Whether the product exists
+ *                 product:
+ *                   type: object
+ *                   description: Product details if found, null if not found
+ *                   nullable: true
+ *       400:
+ *         description: Invalid productId format
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: Invalid productId format
+ *                 code:
+ *                   type: string
+ *                   example: INVALID_ID
+ */
 router.get('/product-in/exists', inventoryController.confirmExistingProduct);
+
+/**
+ * @swagger
+ * /api/inventory/product-in/{id}:
+ *   delete:
+ *     summary: Soft delete a product input request
+ *     tags: [Inventory In]
+ *     description: Marks a product input request as deleted (soft delete)
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the product input request to delete
+ *     responses:
+ *       200:
+ *         description: Product input request deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Product deleted successfully
+ *       404:
+ *         description: Product input request not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: Product not found
+ *                 code:
+ *                   type: string
+ *                   example: NOT_FOUND
+ *       400:
+ *         description: Invalid ID format
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: Invalid ID format
+ *                 code:
+ *                   type: string
+ *                   example: INVALID_ID
+ */
+router.delete('/product-in/:id', inventoryController.deleteProductIn);
+
+
 
 // Export the router
 module.exports = router;
