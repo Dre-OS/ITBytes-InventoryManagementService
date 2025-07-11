@@ -82,11 +82,11 @@ const inventoryController = {
                 });
             }
             const result = await InventoryIn.findOneAndUpdate(
-                { productId: productId, isApproved: false },
+                { productId: productId, isDeleted: false },
                 { isDeleted: true })
-                if (!result) {
-                    console.error('No product input request found to delete');
-                } else console.log('Stock added successfully:', result);
+            if (!result) {
+                console.error('No product input request found to delete');
+            } else console.log('Stock added successfully:', result);
             res.status(201).json({
                 message: 'Stock added successfully',
                 product: {
@@ -492,7 +492,7 @@ const inventoryController = {
     },
     getProductsIn: async (req, res) => {
         try {
-            const productsIn = await InventoryIn.find();
+            const productsIn = await InventoryIn.find({isDeleted: false});
             res.json(productsIn);
         } catch (error) {
             res.status(500).json({ 
@@ -503,10 +503,11 @@ const inventoryController = {
     },
     confirmExistingProduct: async (req, res) => {
         try {
-            const { productId } = req.body;
+            const {productId}  = req.body;
+            console.log('Checking product existence for ID:', productId);
             
             // Validate that productId is provided
-            if (!productId || !isValidObjectId(productId)) {
+            if (!productId) {
             return res.status(400).json({
                 success: false,
                 message: 'Invalid productId format',
@@ -515,7 +516,7 @@ const inventoryController = {
             }
             
             // Check if product exists in inventory
-            const product = await Inventory.findById(productId);
+            const product = await Inventory.findOne({productId: productId});
             
             return res.status(200).json({
             success: true,
