@@ -521,18 +521,23 @@ router.get('/product-in', inventoryController.getProductsIn);
 
 /**
  * @swagger
- * /api/inventory/product-in/exists:
- *   get:
+ * /api/inventory/products/exists:
+ *   post:
  *     summary: Check if a product exists by productId
  *     tags: [Inventory In]
  *     description: Verifies if a product with the given productId exists in the inventory
- *     parameters:
- *       - in: query
- *         name: productId
- *         required: true
- *         schema:
- *           type: string
- *         description: The productId to check
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - productId
+ *             properties:
+ *               productId:
+ *                 type: string
+ *                 description: The productId to check
  *     responses:
  *       200:
  *         description: Product existence check result
@@ -568,7 +573,7 @@ router.get('/product-in', inventoryController.getProductsIn);
  *                   type: string
  *                   example: INVALID_ID
  */
-router.get('/product-in/exists', inventoryController.confirmExistingProduct);
+router.post('/products/exists', inventoryController.confirmExistingProduct);
 
 /**
  * @swagger
