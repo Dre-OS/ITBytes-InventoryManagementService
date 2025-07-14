@@ -24,14 +24,14 @@ const messagingConfig = {
 
 messagingInventory.listen({
   ...messagingConfig,
-  exchange: 'payment',
-  queue: 'payment-events',
-  routingKey: 'payment.*', // This will catch all order events
+  exchange: 'order',
+  queue: 'order-events',
+  routingKey: 'order.*', // This will catch all order events
   consumerOptions: { noAck: false }, // Enable explicit acknowledgments
 });                         
 
 // Then use separate middleware for different message types
-messagingInventory.use('payment.success', MessagingController.paymentSuccess);
+messagingInventory.use('order.created', MessagingController.orderCreated);
 
 // Swagger Configuration
 const swaggerOptions = {
@@ -51,7 +51,7 @@ const swaggerOptions = {
                 description: 'Inventory'
             },
             {
-                url: 'http://localhost:3000',
+                url: process.env.API_URL,
                 description: 'Local Inventory'
             }
         ],
