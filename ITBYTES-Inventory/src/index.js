@@ -1,3 +1,6 @@
+// Load environment variables
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
@@ -9,15 +12,11 @@ const inventoryRoutes = require('./routes/inventory.route');
 const rabbitExpress = require('rabbitmq-express');
 const messagingInventory = rabbitExpress();
 
-
-// Load environment variables
-require('dotenv').config();
-
 const { MessagingController } = require('./configs/rabbitmq.config');
 
 // Required for RabbitMQ listener
 const messagingConfig = {
-  rabbitURI: process.env.RABBITMQ_URL || 'amqp://guest:guest@localhost:5672',
+  rabbitURI: process.env.CLOUDAMQP_URL || process.env.RABBITMQ_URL || 'amqp://guest:guest@localhost:5672',
   exchangeType: 'topic',
 }
 
@@ -47,7 +46,7 @@ const swaggerOptions = {
         },
         servers: [
             {
-                url: 'http://192.168.9.2:3000',
+                url: 'http://192.168.9.5:3002',
                 description: 'Inventory'
             },
             {
@@ -341,12 +340,15 @@ const startServer = async () => {
         await connectDB();
         console.log('Connected to MongoDB successfully');
         
+        // Setup RabbitMQ messaging
+        await setupMessaging();
+
         app.listen(PORT, () => {
             console.log(`Inventory Management Service is running on port ${PORT}`);
             console.log(`Swagger documentation is available at http://localhost:${PORT}/api-docs`);
         });
     } catch (error) {
-        console.error('Failed to connect to MongoDB:', error);
+        console.error('Failed to connect to MongoDB or setup messaging:', error);
         process.exit(1);
     }
 };

@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const inventorySchema = new mongoose.Schema({
+    productId: {
+        type: String,
+        required: false,
+        unique: true,
+    },
     name: {
         type: String,
         required: true,
@@ -17,9 +22,10 @@ const inventorySchema = new mongoose.Schema({
     },
     price: {
         type: Number,
-        required: true,
+        required: false,
         min: [0, 'Price cannot be negative']
     },
+
     image: {
         type: String,
         validate: {
@@ -32,7 +38,7 @@ const inventorySchema = new mongoose.Schema({
     },
     category: {
         type: String,
-        required: true,
+        required: false,
         trim: true
     },
     tags: {

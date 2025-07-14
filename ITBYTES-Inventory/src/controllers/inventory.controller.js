@@ -1,19 +1,19 @@
 const Inventory = require('../models/inventory.model');
+const InventoryIn = require('../models/inventory.in.model')
 const { publisher, MessagingController } = require('../configs/rabbitmq.config');
 
-//test RabbitMQ connection
-exports.testRabbitMQSend = async (req, res) => {
-    try {
-        // Check RabbitMQ connection status
-        publisher.inventoryUpdated(server.channel, Buffer.from('Test message'));
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to test RabbitMQ connection'
-        });
-    }
-}; 
-
+// //test RabbitMQ connection
+// exports.testRabbitMQSend = async (req, res) => {
+//     try {
+//         // Check RabbitMQ connection status
+//         publisher.inventoryUpdated(server.channel, Buffer.from('Test message'));
+//     } catch (error) {
+//         return res.status(500).json({
+//             success: false,
+//             message: 'Failed to test RabbitMQ connection'
+//         });
+//     }
+// }; 
 
 // Validate MongoDB ID
 const isValidObjectId = (id) => {
@@ -54,7 +54,59 @@ const inventoryController = {
     //         });
     //     }
     // },
-
+    addStockWhenNameExist: async (req, res) => {
+        try {
+            const { productId, name, quantity, category,description, price, tags } = req.body;
+            const exiting = await Inventory.findOne({ productId, isActive: true });
+            if (!exiting) {
+               await Inventory.create({
+                    productId: productId,
+                    name: name,
+                    quantity: quantity,
+                    category: category,
+                    description: description,
+                    price: price,
+                    tags: tags,   
+                    lastUpdated: new Date()
+                });
+            }
+            else {
+                // Update stock quantity
+                exiting.quantity += quantity;
+                const updatedProduct = await exiting.save();
+                // Publish to RabbitMQ
+                // publisher.inventoryUpdated(server.channel, Buffer.from(JSON.stringify(updatedProduct)));
+                res.json({
+                    message: 'Stock updated successfully',
+                    product: updatedProduct
+                });
+            }
+            const result = await InventoryIn.findOneAndUpdate(
+                { productId: productId, isDeleted: false },
+                { isDeleted: true })
+            if (!result) {
+                console.error('No product input request found to delete');
+            } else console.log('Stock added successfully:', result);
+            res.status(201).json({
+                message: 'Stock added successfully',
+                product: {
+                    productId: productId,
+                    name: name,
+                    quantity: quantity,
+                    category: category,
+                    description: description,
+                    price: price,
+                    tags: tags
+                }
+            });
+        } catch (error) {
+            console.error('Error adding stock:', error);
+            res.status(500).json({
+                message: 'Error adding stock',
+                code: 'ADD_STOCK_ERROR'
+            });
+        }
+    },
     // Get all products with optional filtering
     getAllProducts: async (req, res) => {
         try {
@@ -96,7 +148,6 @@ const inventoryController = {
             });
         }
     },
-
     // Create a new product
     createProduct: async (req, res) => {
         try {
@@ -117,29 +168,89 @@ const inventoryController = {
             });
         }
     },
-
-    // Update a product
+    // Update an existing product
     updateProduct: async (req, res) => {
         try {
-            const updatedProduct = await Inventory.findByIdAndUpdate(
-                req.params.id,
-                {
-                    ...req.body,
-                    lastUpdated: new Date()
-                },
-                { new: true }
-            );
-            if (!updatedProduct) {
-                return res.status(404).json({ 
+            const { id } = req.params;
+
+            // Validate ID
+            if (!id || !isValidObjectId(id)) {
+                return res.status(400).json({
+                    message: 'Invalid product ID',
+                    code: 'INVALID_ID'
+                });
+            }
+
+            // Get the current product to check if it exists and is active
+            const currentProduct = await Inventory.findById(id);
+            if (!currentProduct) {
+                return res.status(404).json({
                     message: 'Product not found',
                     code: 'NOT_FOUND'
                 });
             }
 
+            if (!currentProduct.isActive) {
+                return res.status(400).json({
+                    message: 'Cannot update inactive product',
+                    code: 'INACTIVE_PRODUCT'
+                });
+            }
+
+            // Prepare update data with allowed fields
+            const updateData = {
+                name: req.body.name,
+                quantity: req.body.quantity,
+                description: req.body.description,
+                price: req.body.price,
+                image: req.body.image,
+                category: req.body.category,
+                tags: req.body.tags,
+                lastUpdated: new Date()
+            };
+
+            // Remove undefined fields
+            Object.keys(updateData).forEach(key => 
+                updateData[key] === undefined && delete updateData[key]
+            );
+
+            // Update the product
+            const updatedProduct = await Inventory.findByIdAndUpdate(
+                id,
+                updateData,
+                { new: true, runValidators: true }
+            );
+
+            // Notify via RabbitMQ if quantity changed
+            if (req.body.quantity !== undefined && 
+                req.body.quantity !== currentProduct.quantity) {
+                try {
+                    await publisher.inventoryUpdated(Buffer.from(JSON.stringify({
+                        id: updatedProduct._id,
+                        name: updatedProduct.name,
+                        oldQuantity: currentProduct.quantity,
+                        newQuantity: updatedProduct.quantity,
+                        change: updatedProduct.quantity - currentProduct.quantity
+                    })));
+                } catch (mqError) {
+                    console.warn('Failed to publish inventory update:', mqError.message);
+                }
+            }
+
             res.json(updatedProduct);
         } catch (error) {
-            res.status(400).json({ 
-                message: error.message,
+            // Handle validation errors
+            if (error.name === 'ValidationError') {
+                return res.status(400).json({
+                    message: error.message,
+                    code: 'VALIDATION_ERROR'
+                });
+            }
+
+            // Handle other errors
+            console.error('Update product error:', error);
+            res.status(500).json({
+                message: 'Error updating product',
                 code: 'UPDATE_ERROR'
             });
         }
@@ -303,6 +414,172 @@ const inventoryController = {
             res.status(500).json({ 
                 message: 'Error fetching statistics',
                 code: 'STATS_ERROR'
+            });
+        }
+    },
+    // Create a new product input request
+    createProductIn: async (req, res) => {
+        try {
+            // Validate required fields
+            const { name, quantity } = req.body;
+            if (!name || !quantity) {
+                return res.status(400).json({
+                    message: 'Name and quantity are required',
+                    code: 'VALIDATION_ERROR'
+                });
+            }
+
+            // Create new product
+            const product = new InventoryIn({
+                productId: req.body.productId || null, // Optional field
+                name,
+                quantity,
+                isApproved: false,
+                lastUpdated: new Date()
+            });
+
+            const savedProduct = await product.save();
+            res.status(201).json(savedProduct);
+        } catch (error) {
+            res.status(400).json({ 
+                message: error.message,
+                code: 'VALIDATION_ERROR'
+            });
+        }
+    },
+
+    // Update a product input request
+    updateProductIn: async (req, res) => {
+        try {
+            // Validate ID
+            if (!isValidObjectId(req.params.id)) {
+                return res.status(400).json({
+                    message: 'Invalid product ID',
+                    code: 'INVALID_ID'
+                });
+            }
+
+            // Only allow updating specific fields
+            const { name, quantity, isApproved } = req.body;
+            const updateData = {
+                ...(productId && { productId }),
+                ...(name && { name }),
+                ...(quantity && { quantity }),
+                ...(isApproved !== undefined && { isApproved }),
+                lastUpdated: new Date()
+            };
+
+            const updatedProduct = await InventoryIn.findByIdAndUpdate(
+                req.params.id,
+                updateData,
+                { new: true }
+            );
+
+            if (!updatedProduct) {
+                return res.status(404).json({ 
+                    message: 'Product not found',
+                    code: 'NOT_FOUND'
+                });
+            }
+
+            res.json(updatedProduct);
+        } catch (error) {
+            res.status(400).json({ 
+                message: error.message,
+                code: 'UPDATE_ERROR'
+            });
+        }
+    },
+    getProductsIn: async (req, res) => {
+        try {
+            const productsIn = await InventoryIn.find({isDeleted: false});
+            res.json(productsIn);
+        } catch (error) {
+            res.status(500).json({ 
+                message: 'Error fetching product input requests',
+                code: 'FETCH_ERROR'
+            });
+        }
+    },
+    confirmExistingProduct: async (req, res) => {
+        try {
+            const {productId}  = req.body;
+            console.log('Checking product existence for ID:', productId);
+            
+            // Validate that productId is provided
+            if (!productId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid productId format',
+                code: 'INVALID_ID'
+            });
+            }
+            
+            // Check if product exists in inventory
+            const product = await Inventory.findOne({productId: productId});
+            
+            return res.status(200).json({
+            success: true,
+            exists: !!product,
+            product: product ? {
+                id: product._id,
+                name: product.name
+            } : null
+            });
+        } catch (error) {
+            console.error('Error checking product existence:', error);
+            res.status(500).json({
+            success: false,
+            message: 'Error checking if product exists',
+            code: 'CHECK_PRODUCT_ERROR'
+            });
+        }
+    },
+
+    // Soft delete a product
+    deleteProductIn: async (req, res) => {
+        try {
+            const { productId } = req.params;
+
+            // Validate ID
+            if (!id || !isValidObjectId(id)) {
+                return res.status(400).json({
+                    message: 'Invalid product ID',
+                    code: 'INVALID_ID'
+                });
+            }
+
+            const product = await InventoryIn.findById(productId);
+
+            // Check if product exists
+            if (!product) {
+                return res.status(404).json({ 
+                    message: 'Product not found',
+                    code: 'NOT_FOUND'
+                });
+            }
+
+            // Check if product is already inactive
+            if (!product.isDeleted) {
+                return res.status(400).json({
+                    message: 'Product is already deactivated',
+                    code: 'ALREADY_INACTIVE'
+                });
+            }
+
+            // Perform soft delete
+            product.isDeleted = false;
+            await product.save();
+
+            res.json({ 
+                message: 'Product deactivated successfully',
+                product 
+            });
+        } catch (error) {
+            console.error('Delete product error:', error);
+            res.status(500).json({ 
+                message: 'Error deactivating product',
+                code: 'DELETE_ERROR'
             });
         }
     }
