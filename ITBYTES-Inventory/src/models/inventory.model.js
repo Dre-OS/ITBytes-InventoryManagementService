@@ -92,4 +92,4 @@ inventorySchema.statics.findLowStock = function(threshold = 10) {
 };
 
 const Inventory = mongoose.model('Inventory', inventorySchema);
-module.exports = Inventory;
+module.exports = Inventory
