@@ -31,6 +31,7 @@ messagingInventory.listen({
 
 // Then use separate middleware for different message types
 messagingInventory.use('order.created', MessagingController.orderCreated);
+messagingInventory.use('order.cancelled', MessagingController.orderCancelled);
 
 // Swagger Configuration
 const swaggerOptions = {
@@ -341,7 +342,7 @@ const startServer = async () => {
         console.log('Connected to MongoDB successfully');
         
         // Setup RabbitMQ messaging
-        await setupMessaging();
+        // await setupMessaging();
 
         app.listen(PORT, () => {
             console.log(`Inventory Management Service is running on port ${PORT}`);

@@ -56,49 +56,57 @@ const inventoryController = {
     // },
     addStockWhenNameExist: async (req, res) => {
         try {
-            const { productId, name, quantity, category,description, price, tags } = req.body;
+            const { productId, name, quantity, category, description, price, tags } = req.body;
             const exiting = await Inventory.findOne({ productId, isActive: true });
+            let responseData;
+
             if (!exiting) {
-               await Inventory.create({
-                    productId: productId,
-                    name: name,
-                    quantity: quantity,
-                    category: category,
-                    description: description,
-                    price: price,
-                    tags: tags,   
+                await Inventory.create({
+                    productId,
+                    name,
+                    quantity,
+                    category,
+                    description,
+                    price,
+                    tags,
                     lastUpdated: new Date()
                 });
-            }
-            else {
+                responseData = {
+                    message: 'Stock added successfully',
+                    product: {
+                        productId,
+                        name,
+                        quantity,
+                        category,
+                        description,
+                        price,
+                        tags
+                    }
+                };
+            } else {
                 // Update stock quantity
                 exiting.quantity += quantity;
                 const updatedProduct = await exiting.save();
                 // Publish to RabbitMQ
                 // publisher.inventoryUpdated(server.channel, Buffer.from(JSON.stringify(updatedProduct)));
-                res.json({
+                responseData = {
                     message: 'Stock updated successfully',
                     product: updatedProduct
-                });
+                };
             }
+
             const result = await InventoryIn.findOneAndUpdate(
                 { productId: productId, isDeleted: false },
-                { isDeleted: true })
+                { isDeleted: true }
+            );
             if (!result) {
                 console.error('No product input request found to delete');
-            } else console.log('Stock added successfully:', result);
-            res.status(201).json({
-                message: 'Stock added successfully',
-                product: {
-                    productId: productId,
-                    name: name,
-                    quantity: quantity,
-                    category: category,
-                    description: description,
-                    price: price,
-                    tags: tags
-                }
-            });
+            } else {
+                console.log('Stock added successfully:', result);
+            }
+
+            // Only send one response
+            res.status(201).json(responseData);
         } catch (error) {
             console.error('Error adding stock:', error);
             res.status(500).json({
