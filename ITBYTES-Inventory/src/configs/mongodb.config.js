@@ -5,7 +5,7 @@ const connectDB = async () => {
         const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/itbytes_db';
         
         const connection = await mongoose.connect(uri, {
-            dbName: 'itbytes_db',
+            dbName: 'itbytes-inventory',
             serverSelectionTimeoutMS: 5000,
             autoIndex: true,
             maxPoolSize: 10
